@@ -23,7 +23,7 @@ if os.path.exists("orion.jpg"):
         </style>
     """, unsafe_allow_html=True)
 
-# 💡 核心進化：啟動 60 秒全自動天網重新整理內核 (每 60,000 毫秒自動重新整理並觸發後台爬蟲)
+# 核心進化：啟動 60 秒全自動天網重新整理內核
 st_autorefresh(interval=60000, key="datarefresh")
 
 # 專屬天網標題
@@ -60,7 +60,7 @@ def get_monster_base_data():
         {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備註": "Cosmos 指標核心巨鱷"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "保底積分": 14500000000, "備註": "Cosmos 核心玩家巨鱷"},
         {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備註": "Cosmos 核心玩家鯊魚"},
-        {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備註": "Cosmos 核心玩家鯊魚"}
+        {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備謎": "Cosmos 核心玩家鯊魚"}
     ]
     return pd.DataFrame(monsters)
 
@@ -101,11 +101,10 @@ def fetch_and_collide_data():
             pass
     return status_dict, player_mode_dict, score_dict
 
-# 5. 背景自動執行打撈，省去手動按鈕
+# 5. 背景自動執行打撈
 latest_status, latest_modes, latest_scores = fetch_and_collide_data()
 
 df_monsters = get_monster_base_data()
-# 💡 依照指示修改欄位名稱為 "落腳新宇宙"
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
@@ -126,12 +125,22 @@ df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
-# 6. 上半部：實時動態分流計數器
-col1, col2, col3, col4 = st.columns(4)
-with col1: st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
-with col2: count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
-with col3: count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
-with col4: count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 员</span></div>', unsafe_allow_html=True)
+# 6. 💡 上半部：實時動態分流計數器 (改用精準配比 [1, 1.2, 1.2, 1.2, 3] 強制將黃框數據往左側靠攏)
+col1, col2, col3, col4, col5 = st.columns([1, 1.2, 1.2, 1.2, 3])
+
+with col1: 
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
+with col2: 
+    count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
+with col3: 
+    count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
+with col4: 
+    count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
+with col5:
+    st.write("") # 隱形防護罩欄位，負責撐開右側多餘空間
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -139,6 +148,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("### 🪟 即時監控情報管理表")
 st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-# 8. 下半部：依照指示正名的「全新終極戰略備忘錄」
+# 8. 下半部：戰略備忘錄
 st.markdown("---")
 st.markdown("### 📌 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！")

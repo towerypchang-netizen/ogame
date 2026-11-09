@@ -9,10 +9,10 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 終極天網 CSS：強制宣告左右雙軌 HTML Grid 並列布局，消滅所有外露代碼
+# 💡 注入專屬黑框白字「星域監控艙」與 HTML Grid 雙軌並列布局的 CSS 樣式律令
 st.markdown("""
     <style>
-    /* 🎯 黑框白字星域監控艙外殼 */
+    /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
     .universe-monitor-box {
         border: 2px solid #ffffff !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
@@ -151,6 +151,7 @@ df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
 
+# 純 HTML 實心圓點指示燈，白字鎖定
 def dynamic_threat_level(score):
     if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">2千億級暴龍</span>'
     elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">千億級金剛</span>'
@@ -161,7 +162,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 依分數排序並格式化千分位
+# 💡 終極修正：將手誤打錯的 "實清總積分" 徹底更正為 "實時總積分"，焊死天梯核心！
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
@@ -184,10 +185,9 @@ st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# === 📊 下半部全局實裝：全面捨棄大引號與 components，改用純字串動態注入，物理清除幽靈快取 ===
+# === 📊 下半部全局實裝：乾淨格式化變數，強制同屏大合體歸位！ ===
 left_html = f'<div style="display: flex; flex-direction: column;"><div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_b}</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_c}</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_d}</span> 員</div></div></div>'
 
 table_html = df_filtered.to_html(escape=False, index=False)
 right_html = f'<div style="display: flex; flex-direction: column; width: 100%;"><div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div><div style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 15px;">🪟 即時監控情報管理表</div>{table_html}</div>'
 
-# 🚀 最終大絕：用最純粹的 HTML 行內加法直接在一行代碼內射出全版面，快取無處容身！

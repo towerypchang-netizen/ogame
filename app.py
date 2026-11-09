@@ -73,6 +73,21 @@ st.markdown("""
         text-align: left !important;
         border-bottom: 1px solid rgba(255,255,255,0.1) !important;
     }
+    
+    /* 讓 Streamlit 原生按鈕完美貼合監控艙寬度的樣式調校 */
+    div.stButton > button {
+        width: 149px !important;
+        background-color: rgba(14, 17, 23, 0.9) !important;
+        color: white !important;
+        border: 1px solid #ffffff !important;
+        border-radius: 4px !important;
+        margin-bottom: 10px !important;
+    }
+    div.stButton > button:hover {
+        background-color: #ffffff !important;
+        color: black !important;
+        border: 1px solid #ffffff !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -166,7 +181,7 @@ def fetch_and_collide_data():
                 headers=headers, timeout=(3, 5)
             )
             
-            # 若遇到新宇宙 403 錯誤，直接捕獲並跳過，不中斷原宇宙數據的獲取
+            # 若遇到新宇宙 403 錯誤，直接捕獲並跳過，不中斷舊宇宙數據獲取
             if response.status_code == 403:
                 continue
                 
@@ -176,10 +191,8 @@ def fetch_and_collide_data():
                 for line in lines:
                     for monster_id in base_df["ID"].tolist():
                         if monster_id in line:
-                            # 判定落腳宇宙（若是在新宇宙發現，則覆蓋舊宇宙的位置）
                             status_dict[monster_id] = uni_name
                             
-                            # 判定玩家在該宇宙的即時狀態
                             if f"{monster_id}(v)" in line.replace(" ", ""): 
                                 player_mode_dict[monster_id] = "🏖️ 假期 (v)"
                             elif f"{monster_id}(i)" in line.replace(" ", ""): 
@@ -187,7 +200,6 @@ def fetch_and_collide_data():
                             else: 
                                 player_mode_dict[monster_id] = "🟢 正常（非在線判定）"
                                 
-                            # 提取實時積分數字
                             numbers = re.findall(r'\d[\d\s\.]{5,}', line)
                             for num_str in numbers:
                                 clean_num = int(re.sub(r'[\s\.]', '', num_str))
@@ -207,11 +219,9 @@ with st.spinner("讀取宇宙資料中…"):
 
 df_monsters = get_monster_base_data()
 
-# 🎯 執行全新業務邏輯：若玩家在新舊宇宙的實時網頁數據中都完全找不到（未確認），代表已遷徙或刪號
+# 🎯 執行全新業務邏輯：若玩家在新舊宇宙的網頁數據中完全搜尋不到，代表已遷徙或刪號，顯示為「已遷徙或不明」
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
-df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(
-    lambda x: latest_modes.get(x, "已遷徙或不明") if x not in latest_modes else latest_modes.get(x)
-)
+df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
 
 # 純 HTML 實心圓點指示燈，白字鎖定
@@ -223,11 +233,3 @@ def dynamic_threat_level(score):
     elif score > 0: return '<span style="color:#00f900;">●</span> <span style="color:#ffffff; font-weight:bold;">孵化中幼體</span>'
     else: return '<span style="color:#ffffff;">○</span> <span style="color:#ffffff;">等待數據同步</span>'
 
-df_monsters["積分來源"] = df_monsters["ID"].apply(
-    lambda player: "網站擷取" if player in latest_scores else "預設保底（非即時）"
-)
-
-df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
-
-# 🧱 資料排序與格式化
-df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)

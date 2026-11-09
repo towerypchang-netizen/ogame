@@ -119,17 +119,17 @@ df_monsters["實時總積分"] = df_monsters["ID"].apply(lambda x: st.session_st
 # 💡 動態劃分四大猛獸獵場階級
 def dynamic_threat_level(score):
     if score >= 200000000000: # > 2000億
-        return "Rex 2千億級暴龍"
+        return "🦖 2千億級暴龍"
     elif score >= 100000000000: # 1000億 ~ 2000億
-        return "Gorilla 千億級金剛"
+        return "🦍 千億級金剛"
     elif score >= 10000000000: # 100億 ~ 999億
-        return "Crocodile 百億級巨鱷"
+        return "🐊 百億級巨鱷"
     elif score >= 1000000000:  # 10億 ~ 99億
-        return "Shark 近百億對手"
+        return "🦈 近百億對手"
     elif score > 0:
-         return "Hatching_Chick 孵化中幼體"
+         return "🐣 孵化中幼體"
     else:
-        return "White_Circle 等待數據同步"
+        return "⚪ 等待數據同步"
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 

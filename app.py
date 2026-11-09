@@ -5,7 +5,7 @@ import requests
 # 1. 網頁頁面配置
 st.set_page_config(page_title="OGame TW 巨鱷動態情報站", page_icon="🪐", layout="wide")
 
-st.title("🪐 OGame-TW 諸神黃昏：千億巨鱷動態情報站")
+st.markdown("### 🪐 OGame-TW 諸神黃昏：千億巨鱷動態情報站")
 st.markdown("---")
 
 # 2. 側邊欄：戰略主控台

@@ -14,7 +14,7 @@ st.sidebar.header("📡 情報控制中心")
 target_universe = st.sidebar.selectbox("切換觀測新宇宙", ["全部宇宙", "Belinda (180)", "Cetus (181)", "Dione (182)"])
 refresh_btn = st.sidebar.button("🔄 立即同步最新情報 (發動數據碰撞)")
 
-# 3. 核心監控巨鱷名單基底 (內建恐龍大軍真實保底積分，彻底消滅 0 分白燈！)
+# 3. 核心監控巨鱷名單基底
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
@@ -70,7 +70,6 @@ def fetch_and_collide_data():
             response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
-                # 使用簡單高效的字串行比對
                 lines = response.text.split('\n')
                 for line in lines:
                     for monster_id in base_df["ID"].tolist():
@@ -108,23 +107,23 @@ if refresh_btn:
         st.session_state.live_scores = latest_scores
         st.success("數據碰撞完成！最新獵場動態已同步。")
 
-# 強制組裝表格，徹底粉碎 Cache 鎖定 Bug
+# 強制組裝表格
 df_monsters = get_monster_base_data()
 df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.session_state.live_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.live_modes.get(x, "未確認"))
 
-# 關鍵保底強制執行：如果網路還沒抓到新分數，強行把後台的『保底積分』塞進欄位！
+# 保底積分強制執行
 df_monsters["實時總積分"] = df_monsters.apply(
     lambda r: st.session_state.live_scores.get(r["ID"], r["保底積分"]), axis=1
 )
 
-# 💡 依照老大指示：動態劃分四大恐龍獵場階級
+# 💡 依照指示：全面換成最純正、絕不出錯的實心圓型警報呼吸燈
 def dynamic_threat_level(score):
-    if score >= 200000000000: return "🦖 2千億級暴龍"
-    elif score >= 100000000000: return "🦍 千億級金剛"
-    elif score >= 10000000000: return "🐊 百億級巨鱷"
-    elif score >= 1000000000: return "🦈 近百億對手"
-    elif score > 0: return "🐣 孵化中幼體"
+    if score >= 200000000000: return "🔴 2千億級暴龍"
+    elif score >= 100000000000: return "🔴 千億級金剛"
+    elif score >= 10000000000: return "🟡 百億級巨鱷"
+    elif score >= 1000000000: return "🔵 近百億對手"
+    elif score > 0: return "🟢 孵化中幼體"
     else: return "⚪ 等待數據同步"
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
@@ -135,7 +134,7 @@ if target_universe != "全部宇宙":
 else:
     df_filtered = df_monsters
 
-# 依照實時總積分由大到小進行絕對天梯天平排序
+# 依照實時總積分進行絕對天梯排序
 df_filtered = df_filtered.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 
@@ -144,33 +143,25 @@ df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前�
 
 # 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
-
 with col2:
     count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
-
 with col3:
-    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
-
 with col4:
-    count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # 7. 中半部：即時情報管理表格
 st.markdown("### 🪟 即時監控情報管理表")
-st.dataframe(
-    df_filtered,
-    use_container_width=True,
-    hide_index=True
-)
+st.dataframe(df_filtered, use_container_width=True, hide_index=True)
 
-# 8. 下半部：情報備忘與外部聯結 (捨棄不穩定元件，改用穩固排版)
+# 8. 下半部：情報備忘
 st.markdown("---")
 st.markdown("### 📌 戰略備忘錄")
 st.markdown("""

@@ -8,20 +8,38 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 終極天網大絕：將橫向平分完全打破，強制定義垂直直列式監控面板的 HTML 樣式
+# 💡 終極天網大絕：注入專屬黑框白字「星域監控艙」的 CSS 樣式律令
 st.markdown("""
     <style>
-    .custom-vertical-panel {
-        display: flex !important;
-        flex-direction: column !important;  /* 💡 強制由上到下直列式排列！ */
-        justify-content: flex-start !important;
-        align-items: flex-start !important;
-        gap: 12px !important;                 /* 各個直列項目之間的上下舒適間距 */
-        text-align: left !important;
-        padding-bottom: 20px !important;
+    /* 物理消滅 Streamlit 預設多餘間距，讓左右雙軌靠得更緊湊 */
+    [data-testid="stHorizontalBlock"] {
+        gap: 25px !important;
     }
-    .custom-vertical-item {
-        text-align: left !important;
+    /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
+    .universe-monitor-box {
+        border: 2px solid #ffffff !important;
+        background-color: rgba(14, 17, 23, 0.9) !important;
+        padding: 15px 10px !important;
+        border-radius: 4px !important;
+        text-align: center !important;
+        width: 125px !important;
+        margin-bottom: 20px !important;
+    }
+    .universe-title {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        color: #ffffff !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        margin-bottom: 8px !important;
+    }
+    .universe-count {
+        font-size: 12px !important;
+        color: #ffffff !important;
+    }
+    .universe-num {
+        font-size: 15px !important;
+        font-weight: bold !important;
+        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -44,11 +62,7 @@ if os.path.exists("orion.jpg"):
 # 核心進化：啟動 60 秒全自動天網重新整理內核
 st_autorefresh(interval=60000, key="datarefresh")
 
-# 專屬天網標題
-st.markdown("### 🪐 OGame-TW 諸神黃昏：u10-TW FazoR 情報站")
-st.markdown("---")
-
-# 3. 核心監控巨鱷名單基底
+# 3. 核心監控巨鱷名單基底 (共 23 員鎖定)
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
@@ -138,7 +152,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 全螢幕預設全部顯示
+# 全螢幕預設全部顯示排序
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
@@ -148,34 +162,51 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 6. 💡 上半部：實時動態垂直分流面板 (物理性卡死為由上到下的全直列式排版)
-st.markdown(f"""
-    <div class="custom-vertical-panel">
-        <div class="custom-vertical-item">
-            <span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸：</span>
-            <span style="font-size: 18px; font-weight: 700; color: white;">{len(df_monsters)} 員</span>
-        </div>
-        <div class="custom-vertical-item">
-            <span style="font-size: 13px; color: #b0b3b8;">落腳星域狀態：</span>
-            <span style="font-size: 14px; color: #ffffff;">已進駐 Belinda (180) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_b} 員</span>
-        </div>
-        <div class="custom-vertical-item">
-            <span style="font-size: 13px; color: #b0b3b8;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span style="font-size: 14px; color: #ffffff;">已進駐 Cetus (181) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_c} 員</span>
-        </div>
-        <div class="custom-vertical-item">
-            <span style="font-size: 13px; color: #b0b3b8;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span style="font-size: 14px; color: #ffffff;">已進駐 Dione (182) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_d} 員</span>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+# 💡 6. 核心佈局進化：發動 [1, 7] 雙軌黃金比例並列流
+left_panel, right_panel = st.columns([1, 7])
 
-st.markdown("<br>", unsafe_allow_html=True)
+# === 🧱 左側軌道：焊死老大專屬的黑框白字直列監控艙 ===
+with left_panel:
+    # 為了對齊右側標題，上方稍微預留空隙
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    # 監控艙 1：Belinda
+    st.markdown(f"""
+        <div class="universe-monitor-box">
+            <div class="universe-title">Belinda</div>
+            <div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 監控艙 2：Cetus
+    st.markdown(f"""
+        <div class="universe-monitor-box">
+            <div class="universe-title">Cetus</div>
+            <div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 監控艙 3：Dione
+    st.markdown(f"""
+        <div class="universe-monitor-box">
+            <div class="universe-title">Dione</div>
+            <div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-# 7. 中半部：即時情報管理表格 (HTML 強制高亮渲染)
-st.markdown("### 🪟 即時監控情報管理表")
-st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
+# === 📊 右側主軌道：鋪滿標題與數據管理大表格 ===
+with right_panel:
+    # 專屬天網標題
+    st.markdown("### 🪐 OGame-TW 諸神黃昏：u10-TW FazoR 情報站")
+    st.markdown("---")
+    
+    # 管制共 23 員計數
+    st.markdown(f'<span style="color:#b0b3b8; font-size:14px; font-weight:bold;">管制共 {len(df_monsters)} 員</span>', unsafe_allow_html=True)
+    
+    # 中半部：即時情報管理表格 (HTML 強制高亮渲染)
+    st.markdown("### 🪟 即時監控情報管理表")
+    st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-# 8. 下半部：戰略備忘錄
+# 8. 最底部：橫跨全寬度的戰略備忘錄
 st.markdown("---")
 st.markdown("### 📌 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！")

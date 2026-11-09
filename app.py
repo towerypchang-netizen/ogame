@@ -17,25 +17,35 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（完美剔除可能造成衝突的霸道全局寬度）
+# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（完美剔除任何分欄衝突）
 st.markdown("""
     <style>
+    /* 🎯 橫向並列大外殼：讓按鈕與三個監控艙一字排開，緊湊且高顏值 */
+    .monitor-top-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 20px !important;
+        flex-wrap: wrap !important;
+        margin-bottom: 25px !important;
+    }
+
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
     .universe-monitor-box {
         border: 2px solid #ffffff !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
-        padding: 15px 10px !important;
+        padding: 10px 15px !important;
         border-radius: 4px !important;
         text-align: center !important;
-        width: 135px !important;
-        margin-bottom: 20px !important;
+        min-width: 125px !important;
     }
     .universe-title {
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: bold !important;
         color: #ffffff !important;
         font-family: 'Courier New', Courier, monospace !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 4px !important;
     }
     .universe-count {
         font-size: 12px !important;
@@ -46,37 +56,41 @@ st.markdown("""
         font-weight: bold !important;
     }
     
-    /* 🖥️ 完美的橫向溢出滾動外殼，徹底杜絕 React DOM 隱藏崩潰 */
+    /* 🖥️ 滿版橫向溢出滾動外殼，徹底杜絕 React DOM 隱藏崩潰 */
     .monitor-table-scroll { 
         overflow-x: auto !important; 
         width: 100% !important; 
+        margin-top: 10px !important;
     }
     
-    /* 修正表格文字與對齊，確保高亮 */
+    /* 修正表格文字與對齊，確保滿版拉伸高亮 */
     .ogame-custom-table {
-        min-width: 900px !important;
+        width: 100% !important;
+        min-width: 1000px !important;
         color: white !important;
         border-collapse: collapse !important;
     }
     .ogame-custom-table th, .ogame-custom-table td {
-        padding: 10px 8px !important;
+        padding: 12px 10px !important;
         text-align: left !important;
         border-bottom: 1px solid rgba(255,255,255,0.1) !important;
     }
     
-    /* 讓 Streamlit 原生重新整理按鈕外觀完美契合黑框風格 */
+    /* 讓 Streamlit 原生重新整理按鈕完美融入一字排開的監控列 */
     div.stButton > button {
-        width: 159px !important;
+        height: 62px !important;
+        width: 150px !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
         color: white !important;
-        border: 1px solid #ffffff !important;
+        border: 2px solid #ffffff !important;
         border-radius: 4px !important;
         font-weight: bold !important;
+        font-size: 15px !important;
     }
     div.stButton > button:hover {
         background-color: #ffffff !important;
         color: black !important;
-        border: 1px solid #ffffff !important;
+        border: 2px solid #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -198,13 +212,13 @@ def fetch_and_collide_data():
             
     return status_dict, player_mode_dict, score_dict, fetch_errors
 
-# 🛡️ 天網雙重保護層
+# 🛡️ 天網資料保護防線，雙重防堵異常
 try:
     with st.spinner("天網讀取宇宙資料中…"):
         latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
 except Exception as global_err:
     latest_status, latest_modes, latest_scores = {}, {}, {}
-    fetch_errors = ["天網異常：已自動重置離線保底數據"]
+    fetch_errors = ["天網異常：已自動載入離線保底數據"]
 
 df_monsters = get_monster_base_data()
 
@@ -212,7 +226,7 @@ df_monsters = get_monster_base_data()
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
 
-# 強制執行類型轉換
+# 強制執行類型轉換，確保千分位字串化穩固
 df_monsters["實時總積分"] = df_monsters.apply(
     lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1
 ).astype('int64')
@@ -224,14 +238,3 @@ def dynamic_threat_level(score):
     elif score >= 10000000000: return '<span style="color:#ffa500;">●</span> <span style="color:#ffffff; font-weight:bold;">百億級巨鱷</span>'
     elif score >= 1000000000: return '<span style="color:#00c0f2;">●</span> <span style="color:#ffffff; font-weight:bold;">近百億對手</span>'
     elif score > 0: return '<span style="color:#00f900;">●</span> <span style="color:#ffffff; font-weight:bold;">孵化中幼體</span>'
-    else: return '<span style="color:#ffffff;">○</span> <span style="color:#ffffff;">等待數據同步</span>'
-
-df_monsters["積分來源"] = df_monsters["ID"].apply(
-    lambda player: "網站擷取" if player in latest_scores else "預設保底（非即時）"
-)
-
-df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
-
-# 🧱 資料排序與格式化
-df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")

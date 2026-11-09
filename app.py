@@ -86,6 +86,18 @@ else:
     df_filtered = df_monsters
 
 # 6. 上半部：實時戰略儀表板
+# 6. 上半部：實時戰略儀表板
+st.markdown("""
+    <style>
+    [data-testid="stMetricValue"] {
+        font-size: 22px !important;  /* 數字縮小到 22px，看起來更緊湊 */
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 13px !important;  /* 標題文字縮小到 13px */
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("鎖定監控巨鱷", f"{len(df_monsters)} 員")
 col2.metric("已進駐 Belinda (180)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])} 員")

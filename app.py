@@ -9,10 +9,10 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」與 HTML Grid 雙軌並列布局的 CSS 樣式
+# 💡 終極天網 CSS：強制宣告左右雙軌 HTML Grid 並列布局，消滅所有外露代碼
 st.markdown("""
     <style>
-    /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
+    /* 🎯 黑框白字星域監控艙外殼 */
     .universe-monitor-box {
         border: 2px solid #ffffff !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
@@ -38,16 +38,16 @@ st.markdown("""
         font-weight: bold !important;
     }
     
-    /* 💡 終極降維黑科技：利用標準 HTML Grid 焊死左右雙軌並列，表格絕對不會再往下掉！ */
+    /* 💡 HTML Grid 焊死左右雙軌並列，大表格絕對不掉落 */
     .tianwang-main-layout {
         display: grid !important;
-        grid-template-columns: 160px 1fr !important;  /* 左軌固定 160px，右軌佔滿全螢幕剩下空間 */
+        grid-template-columns: 160px 1fr !important;
         gap: 35px !important;
         align-items: start !important;
         width: 100% !important;
     }
     
-    /* 修正表格文字與對齊，確保在星空底圖下清晰高亮 */
+    /* 修正表格文字與對齊，確保高亮 */
     table {
         width: 100% !important;
         color: white !important;
@@ -108,7 +108,7 @@ def get_monster_base_data():
         {"ID": "Paris", "原宇宙": "Oberon", "保底積分": 240000000000, "備註": "Bug堆積天花板，兩千億大暴龍"},
         {"ID": "Glauconome", "原宇宙": "Oberon", "保底積分": 15000000000, "備註": "Oberon 指標核心巨鱷"},
         {"ID": "CCTV77", "原宇宙": "Oberon", "保底積分": 13500000000, "備註": "Oberon 核心編隊巨鱷"},
-        {"ID": "Lord Patator", "原宇宙": "Oberon", "保底積分": 12000000000, "備跡": "頂級高分玩家巨鱷"},
+        {"ID": "Lord Patator", "原宇宙": "Oberon", "保底積分": 12000000000, "備註": "頂級高分玩家巨鱷"},
         {"ID": "Thorfinn", "原宇宙": "Oberon", "保底積分": 11000000000, "備註": "戰力不可小覷的巨鱷"},
         
         # === Cosmos 服 ===
@@ -161,7 +161,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 確保天梯絕對依照分數由高到低原地排列
+# 依分數排序並格式化千分位
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
@@ -184,9 +184,10 @@ st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# === 📊 下半部全局實裝：採用單行拼接流，徹底免除引號未閉合 Bug！ ===
-left_html = '<div style="display: flex; flex-direction: column;"><div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_b) + '</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_c) + '</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_d) + '</span> 員</div></div></div>'
+# === 📊 下半部全局實裝：全面捨棄大引號與 components，改用純字串動態注入，物理清除幽靈快取 ===
+left_html = f'<div style="display: flex; flex-direction: column;"><div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_b}</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_c}</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num" style="color:white;">{count_d}</span> 員</div></div></div>'
 
 table_html = df_filtered.to_html(escape=False, index=False)
-right_html = '<div style="display: flex; flex-direction: column; width: 100%;"><div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 ' + str(len(df_monsters)) + ' 員</div><div style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 15px;">🪟 即時監控情報管理表</div>' + table_html + '</div>'
+right_html = f'<div style="display: flex; flex-direction: column; width: 100%;"><div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div><div style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 15px;">🪟 即時監控情報管理表</div>{table_html}</div>'
 
+# 🚀 最終大絕：用最純粹的 HTML 行內加法直接在一行代碼內射出全版面，快取無處容身！

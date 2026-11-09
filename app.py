@@ -94,7 +94,7 @@ def fetch_and_collide_data():
             
     return status_dict, player_mode_dict, score_dict
 
-# 5. 初始化與狀態記憶
+# 5. 初始化與狀態記憶 (修正變數命名，徹底封殺 KeyError)
 if "current_status" not in st.session_state:
     base_df = get_monster_base_data()
     st.session_state.current_status = {m: "未確認" for m in base_df["ID"].tolist()}
@@ -116,20 +116,20 @@ df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.sess
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.player_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters["ID"].apply(lambda x: st.session_state.player_scores.get(x, 0))
 
-# 💡 依照老大指示：動態劃分四大猛獸獵場階級！
+# 💡 動態劃分四大猛獸獵場階級
 def dynamic_threat_level(score):
     if score >= 200000000000: # > 2000億
-        return "🦖 2千億級暴龍"
+        return "Rex 2千億級暴龍"
     elif score >= 100000000000: # 1000億 ~ 2000億
-        return "🦍 千億級金剛"
+        return "Gorilla 千億級金剛"
     elif score >= 10000000000: # 100億 ~ 999億
-        return "🐊 百億級巨鱷"
+        return "Crocodile 百億級巨鱷"
     elif score >= 1000000000:  # 10億 ~ 99億
-        return "🦈 近百億對手"
+        return "Shark 近百億對手"
     elif score > 0:
-         return "🐣 孵化中幼體"
+         return "Hatching_Chick 孵化中幼體"
     else:
-        return "⚪ 等待數據同步"
+        return "White_Circle 等待數據同步"
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
@@ -159,7 +159,8 @@ with col2:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 
 with col3:
-    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['currently_status'] == 'Cetus (181)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
 
 with col4:

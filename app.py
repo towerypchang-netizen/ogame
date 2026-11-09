@@ -14,11 +14,11 @@ st.sidebar.header("📡 情報控制中心")
 target_universe = st.sidebar.selectbox("切換觀測新宇宙", ["全部宇宙", "Belinda (180)", "Cetus (181)", "Dione (182)"])
 refresh_btn = st.sidebar.button("🔄 立即同步最新情報 (發動數據碰撞)")
 
-# 3. 核心監控巨鱷名單基底 (回歸乾淨純文字，後台用權重卡死排序)
+# 3. 核心監控巨鱷名單基底 (已將 ATRAGON 修正為 2872億 千億級霸主)
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 / SOS 陣列及其死盟 ===
-        {"ID": "WindAngelX", "原宇宙": "Merkur", "威脅程度": "🔴 極高 (千億級)", "排序權重": 4, "備註": "SOS 聯盟核心"},
+        {"ID": "WindAngelX", "原宇宙": "Merkur", "威脅程度": "🔴 極高 (千億級)", "排序權重": 4, "備註": "SOS 聯盟核心，千億大佬"},
         {"ID": "Satan", "原宇宙": "Merkur", "威脅程度": "🔴 極高", "排序權重": 3, "備註": "老牌高軍分狼"},
         {"ID": "Musashi", "原宇宙": "Merkur", "威脅程度": "🟡 高", "排序權重": 2, "備註": "武藏，破壞力強"},
         {"ID": "Coon", "原宇宙": "Merkur", "威脅程度": "🟡 高", "排序權重": 2, "備註": "Merkur 指標戰力"},
@@ -33,14 +33,14 @@ def get_monster_base_data():
         {"ID": "Slime", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "排序權重": 1, "備註": "Merkur 核心編隊"},
         
         # === Oberon 服 / 頂天神仙陣列 ===
-        {"ID": "Paris", "原宇宙": "Oberon", "威脅程度": "🔴 極高 (千億級)", "排序權重": 4, "備註": "Bug堆積疑慮天花板"},
+        {"ID": "Paris", "原宇宙": "Oberon", "威脅程度": "🔴 極高 (千億級)", "排序權重": 4, "備註": "Bug堆積疑慮天花板，千億大佬"},
         {"ID": "Glauconome", "原宇宙": "Oberon", "威脅程度": "🟡 高", "排序權重": 2, "備註": "Oberon 指標核心"},
         {"ID": "CCTV77", "原宇宙": "Oberon", "威脅程度": "🟡 高", "排序權重": 2, "備註": "Oberon 核心編隊"},
         {"ID": "Lord Patator", "原宇宙": "Oberon", "威脅程度": "🟡 高", "排序權重": 2, "備註": "頂級高分玩家"},
         {"ID": "Thorfinn", "原宇宙": "Oberon", "威脅程度": "🟡 高", "排序權重": 2, "備註": "戰力不可小覷"},
         
         # === Cosmos 服 / 頭號威脅陣列 ===
-        {"ID": "ATRAGON", "原宇宙": "Cosmos", "威脅程度": "🔴 極高", "排序權重": 3, "備註": "Cosmos 服頭號威脅"},
+        {"ID": "ATRAGON", "原宇宙": "Cosmos", "威脅程度": "🔴 極高 (千億級)", "排序權重": 4, "備註": "Cosmos服二千八百億終極威脅"},
         {"ID": "Kinopio", "原宇宙": "Cosmos", "威脅程度": "🟡 高", "排序權重": 2, "備註": "Cosmos 指標核心"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "威脅程度": "🟡 高", "排序權重": 2, "備註": "Cosmos 核心玩家"},
         {"ID": "Chief Halo", "原宇宙": "Cosmos", "威脅程度": "🔵 中高", "排序權重": 1, "備註": "Cosmos 核心玩家"},
@@ -115,9 +115,8 @@ if target_universe != "全部宇宙":
 else:
     df_filtered = df_monsters
 
-# 💡 終極黑科技修正：利用後台純數字欄位排序，保證混合宇宙點擊永不出錯
+# 利用純數字權重排序，將包含 ATRAGON 在內的三大千億級大鱷強行卡死在最頂端
 df_filtered = df_filtered.sort_values(by='排序權重', ascending=False)
-# 排序完後，把後台用的「排序權重」隱藏，只吐出乾淨的前台欄位
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "威脅程度", "備註"]]
 
 # 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
@@ -127,20 +126,20 @@ with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨鱷</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
 
 with col2:
-    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    count_b = len(df_monsters[df_monsters['currently_status'] == 'Belinda (180)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 
 with col3:
-    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
 
 with col4:
-    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 7. 中半部：即時情報 management 表格
+# 7. 中半部：即時情報管理表格
 st.markdown("### 🪟 即時監控情報管理表")
 st.dataframe(
     df_filtered,
@@ -157,7 +156,7 @@ with tabs:
     st.write("💡 **老狼生存提醒：**")
     st.write("1. 今晚 19:00 之後，請每隔幾小時點擊一次左側 **[🔄 立即同步最新情報]** 按鈕。")
     st.write("2. 若目標巨鱷在 `mmorpg-stat` 上衝進前 100 名，本表將會**自動亮燈**並顯示其最新落腳宇宙。")
-    st.write("3. 混合宇宙與前端排序已完成底層數字焊死，不論如何點擊都能維持正確的戰略優先順序！")
+    st.write("3. 已成功將 Cosmos 的 2872億 終極魔王 ATRAGON 的威脅度拉滿至千億級並焊死排序！")
 
 with tabs:
     st.markdown("- [mmorpg-stat 全球數據庫首頁](https://mmorpg-stat.eu)")

@@ -133,12 +133,13 @@ st.markdown("---")
 st.markdown("### 📌 戰略備忘錄")
 tabs = st.tabs(["📊 實時觀察手記", "🔗 官方情報源一鍵查"])
 
-with tabs:
+# 💡 這裡加上 [0] 和 [1] 修正 TypeError
+with tabs[0]:
     st.write("💡 **老狼生存提醒：**")
     st.write("1. 今晚 19:00 之後，請每隔幾小時點擊一次左側 **[🔄 立即同步最新情報]** 按鈕。")
     st.write("2. 若目標巨鱷在 `mmorpg-stat` 上衝進前 100 名，本表將會**自動從『未確認』變更為對應新宇宙**。")
     st.write("3. 11/12 19:00 前，只要看見這群怪物大量朝 Cetus 亮燈，我們就往 Dione 撤退；反之亦然。")
 
-with tabs:
+with tabs[1]:
     st.markdown("- [mmorpg-stat 全球數據庫首頁](https://mmorpg-stat.eu)")
     st.markdown("- [OGame TW 官方論壇存檔看板](https://gameforge.com)")

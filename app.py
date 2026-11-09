@@ -123,6 +123,17 @@ else:
 # 重排表格順序，把狀態欄挪到顯眼的位置
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "威脅程度", "備註"]]
 
+# 💡 核心修正：強制定義威脅程度的戰略排序權重
+threat_mapping = {
+    "🔴 極高 (千億級)": 1,
+    "🔴 極高": 2,
+    "🟡 高": 3,
+    "🔵 中高": 4
+}
+# 根據權重進行排序，保證「高」永遠在「中高」的前面！
+df_filtered['sort_key'] = df_filtered['威脅程度'].map(threat_mapping)
+df_filtered = df_filtered.sort_values(by='sort_key').drop(columns=['sort_key'])
+
 # 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
 col1, col2, col3, col4 = st.columns(4)
 

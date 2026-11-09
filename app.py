@@ -6,6 +6,8 @@ import os
 import base64
 from pathlib import Path
 from html import escape
+from html.parser import HTMLParser
+from urllib.parse import urljoin
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -152,57 +154,111 @@ def get_monster_base_data():
     ]
     return pd.DataFrame(monsters)
 
+# mmorpg 網站選單已核對的來源編號；舊設定 151、160 會落到其他宇宙。
+SOURCE_UNIVERSES = {"139": "Merkur", "141": "Oberon", "155": "Cosmos"}
+NEW_UNIVERSES = {"180": "Belinda", "181": "Cetus", "182": "Dione"}
+
+
+def universe_url(uni_id):
+    return f"https://www.mmorpg-stat.eu/?pagex=1&univers=_{uni_id}&pays=11"
+
+
+class RankingParser(HTMLParser):
+    """依玩家所在的表格列取值，不從整行 HTML 猜測積分。"""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self.cells = None
+        self.cell = None
+        self.links = []
+        self.link = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "tr":
+            self.cells, self.links = [], []
+        elif tag in ("td", "th") and self.cells is not None:
+            self.cell = []
+        elif tag == "a" and self.cell is not None:
+            self.link = {"href": attrs.get("href", ""), "text": []}
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell.append(data)
+        if self.link is not None:
+            self.link["text"].append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self.link is not None:
+            self.links.append((self.link["href"], "".join(self.link["text"]).strip()))
+            self.link = None
+        elif tag in ("td", "th") and self.cell is not None:
+            self.cells.append(" ".join("".join(self.cell).split()))
+            self.cell = None
+        elif tag == "tr" and self.cells is not None:
+            self.rows.append((self.cells, self.links))
+            self.cells, self.cell, self.link = None, None, None
+
+
 @st.cache_data(ttl=60, show_spinner=False)
-def fetch_and_collide_data():
-    base_df = get_monster_base_data()
-    status_dict, player_mode_dict, score_dict = {}, {}, {}
-    fetch_errors = []
-    
-    uni_mapping = {
-        "139": "Merkur (139)", 
-        "151": "Oberon (151)", 
-        "160": "Cosmos (160)",
-        "180": "Belinda (180)", 
-        "181": "Cetus (181)", 
-        "182": "Dione (182)"
-    }
-    
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-    
-    for uni_id, uni_name in uni_mapping.items():
+def fetch_and_collide_data(include_new=False):
+    base = get_monster_base_data()
+    origin_by_player = dict(zip(base["ID"], base["原宇宙"]))
+    destinations, modes, scores, player_urls = {}, {}, {}, {}
+    errors, connections = [], []
+    universes = dict(SOURCE_UNIVERSES)
+    if include_new:
+        universes.update(NEW_UNIVERSES)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    for uni_id, name in universes.items():
+        url = universe_url(uni_id)
+        report = {"宇宙": f"{name} ({uni_id})", "連線狀態": "", "符合追蹤玩家": 0, "來源": url}
         try:
-            url = "https://mmorpg-stat.eu"
-            response = requests.get(
-                url, params={"univers": f"_{uni_id}", "pays": 11, "stat": 0},
-                headers=headers, timeout=(2, 3)
-            )
-            
-                
+            response = requests.get(url, headers=headers, timeout=(3, 6))
             response.raise_for_status()
-            if response.status_code == 200:
-                lines = response.text.split('\n')
-                for line in lines:
-                    for monster_id in base_df["ID"].tolist():
-                        if monster_id in line:
-                            status_dict[monster_id] = uni_name
-                            
-                            if f"{monster_id}(v)" in line.replace(" ", ""): 
-                                player_mode_dict[monster_id] = "🏖️ 假期 (v)"
-                            elif f"{monster_id}(i)" in line.replace(" ", ""): 
-                                player_mode_dict[monster_id] = "💤 不活躍 (i)"
-                            else: 
-                                player_mode_dict[monster_id] = "🟢 正常（非在線判定）"
-                                
-                            numbers = re.findall(r'\d[\d\s\.]{5,}', line)
-                            for num_str in numbers:
-                                clean_num = int(re.sub(r'[\s\.]', '', num_str))
-                                if clean_num > 100000000: 
-                                    score_dict[monster_id] = clean_num
-                                    
+            if 'cf-chl' in response.text or '<title>Just a moment' in response.text:
+                raise ValueError("網站要求瀏覽器驗證")
+            title = re.search(r"<title>(.*?)</title>", response.text, re.I | re.S)
+            actual_title = title.group(1).strip() if title else "缺少標題"
+            if not re.search(rf"Universe\s+{re.escape(name)}\s+TW\b", actual_title, re.I):
+                raise ValueError(f"回傳宇宙不符：{actual_title}")
+            parser = RankingParser()
+            parser.feed(response.text)
+            ranking_rows = 0
+            for cells, links in parser.rows:
+                player_links = [(href, text) for href, text in links if re.search(r"[?&]ftr=\d+\.dat(?:&|$)", href)]
+                if not player_links or len(cells) < 5:
+                    continue
+                ranking_rows += 1
+                href, player = player_links[0]
+                if player not in origin_by_player:
+                    continue
+                if uni_id in SOURCE_UNIVERSES and origin_by_player[player] != name:
+                    continue
+                raw_score = re.sub(r"[\s.,\u00a0\u202f]", "", cells[4])
+                if not raw_score.isdecimal():
+                    raise ValueError(f"{player} 的積分欄位格式無法辨識")
+                score = int(raw_score)
+                if score > 9223372036854775807:
+                    raise ValueError(f"{player} 的積分超出可處理範圍")
+                scores[player] = score
+                player_urls[player] = urljoin(url, href)
+                # 狀態標記在玩家欄，而非積分或整列其他欄位。
+                status = re.search(r"\(([^)]*)\)", cells[2][len(player):])
+                flags = status.group(1).lower() if status else ""
+                modes[player] = "🏖️ 假期 (v)" if "v" in flags else "💤 不活躍 (i)" if "i" in flags else "🟢 正常（非在線判定）"
+                if uni_id in NEW_UNIVERSES:
+                    destinations[player] = f"{name} ({uni_id})"
+                report["符合追蹤玩家"] += 1
+            if not ranking_rows:
+                raise ValueError("HTTP 200，但找不到可辨識的玩家排名列")
+            report["連線狀態"] = f"HTTP {response.status_code}；宇宙與排名頁已核對"
         except (requests.RequestException, ValueError, TypeError) as exc:
-            fetch_errors.append(f"{uni_name}：{type(exc).__name__}：{exc}")
-            
-    return status_dict, player_mode_dict, score_dict, fetch_errors
+            report["連線狀態"] = f"讀取失敗：{exc}"
+            errors.append(f"{name} ({uni_id})：{exc}")
+        connections.append(report)
+    return destinations, modes, scores, errors, connections, player_urls
+
 
 def dynamic_threat_level(score):
     if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> 2千億級暴龍'
@@ -225,20 +281,23 @@ left_column, right_column = st.columns([1, 6])
 with left_column:
     if st.button("立即重新整理"):
         fetch_and_collide_data.clear()
+include_new = st.checkbox("啟用新三服同步", value=False, help="目前保留三個宇宙連結；勾選後才開始查詢新服資料。")
 monitor_slot = left_column.empty()
 table_slot = right_column.empty()
 notice_slot = st.empty()
 
 
-def render_monitor_table(frame):
+def render_monitor_table(frame, player_urls=None):
+    player_urls = player_urls or {}
     with monitor_slot.container():
-        for universe in ("Belinda (180)", "Cetus (181)", "Dione (182)"):
+        for uni_id, name in NEW_UNIVERSES.items():
+            universe = f"{name} ({uni_id})"
             count = int((frame["落腳新宇宙"] == universe).sum())
+            label = f"已確認 {count} 員" if include_new else "待開通・暫不查詢"
             st.markdown(
                 '<div class="universe-monitor-box-vertical">'
-                f'<div class="universe-title-fixed">{escape(universe.split()[0])}</div>'
-                f'<div class="universe-count-fixed">已確認 <span class="universe-num-fixed">{count}</span> 員</div>'
-                '</div>', unsafe_allow_html=True,
+                f'<a class="universe-title-fixed" style="color:white;" href="{universe_url(uni_id)}" target="_blank" rel="noopener noreferrer">{name}</a>'
+                f'<div class="universe-count-fixed">{label}</div></div>', unsafe_allow_html=True,
             )
     columns = ["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]
     display_frame = frame.sort_values("實時總積分", ascending=False)[columns].copy()
@@ -246,6 +305,12 @@ def render_monitor_table(frame):
     for column in columns:
         if column != "威脅程度":
             display_frame[column] = display_frame[column].map(lambda value: escape(str(value)))
+    for index, row in frame.iterrows():
+        origin_id = next(key for key, name in SOURCE_UNIVERSES.items() if name == row["原宇宙"])
+        display_frame.at[index, "原宇宙"] = f'<a style="color:white;" target="_blank" rel="noopener noreferrer" href="{universe_url(origin_id)}">{escape(row["原宇宙"])} ({origin_id})</a>'
+        if row["ID"] in player_urls:
+            href = escape(player_urls[row["ID"]], quote=True)
+            display_frame.at[index, "ID"] = f'<a style="color:white;" target="_blank" rel="noopener noreferrer" href="{href}">{escape(row["ID"])}</a>'
     table = display_frame.to_html(index=False, escape=False, classes="ogame-final-universe-table", border=0)
     html = (
         f'<div style="color:white;">管制共 {len(frame)} 員</div>'
@@ -256,41 +321,46 @@ def render_monitor_table(frame):
 
 
 fallback = get_monster_base_data()
-fallback["落腳新宇宙"] = "未確認"
+fallback["落腳新宇宙"] = "未確認" if include_new else "待開通（暫不查詢）"
 fallback["當前玩家狀態"] = "未確認"
 fallback["實時總積分"] = fallback["保底積分"]
-fallback["積分來源"] = "預設保底（非即時）"
+fallback["積分來源"] = "非即時"
 fallback["威脅程度"] = fallback["實時總積分"].apply(dynamic_threat_level)
 render_monitor_table(fallback)
 notice_slot.info("正在讀取統計網站；表格已先載入預設資料。")
 
 # 取得資料後更新表格
 latest_status, latest_modes, latest_scores = {}, {}, {}
+connections, player_urls = [], {}
 try:
-    latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
+    latest_status, latest_modes, latest_scores, fetch_errors, connections, player_urls = fetch_and_collide_data(include_new)
 except Exception as exc:
     fetch_errors = [f"資料讀取失敗，使用預設保底資料：{type(exc).__name__}：{exc}"]
 
 df_monsters = get_monster_base_data()
 
 # 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
-df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
+df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認" if include_new else "待開通（暫不查詢）"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
 
 # 純 HTML 實心指示燈，修正回歸自訂 Table 機制
-df_monsters["積分來源"] = df_monsters["ID"].apply(
-    lambda player: "網站擷取（待核對）" if player in latest_scores else "預設保底（非即時）"
-)
+df_monsters["積分來源"] = "非即時"
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-render_monitor_table(df_monsters)
+render_monitor_table(df_monsters, player_urls)
 if fetch_errors:
     notice_slot.warning("部分統計資料讀取失敗，未取得的積分顯示預設值。已確認人數不代表實際進駐總人數。")
     with st.expander("查看資料讀取錯誤"):
         for error in fetch_errors:
             st.text(error)
-elif not latest_status:
+elif not latest_scores:
     notice_slot.warning("網站請求完成，但未辨識到追蹤玩家；目前顯示預設資料，無法據此判斷遷徙狀態。")
 else:
-    notice_slot.info("網站擷取結果仍需核對；未確認的位置不代表玩家尚未遷入。")
+    notice_slot.info(f"原宇宙排名頁已讀取；取得 {len(latest_scores)} / {len(df_monsters)} 名玩家積分。未列出的玩家保留預設值。")
+
+with st.expander("mmorpg 原宇宙連線狀態", expanded=True):
+    for report in connections:
+        st.markdown(f"[{report['宇宙']}]({report['來源']})：{report['連線狀態']}；找到 {report['符合追蹤玩家']} 名追蹤玩家")
+    if not include_new:
+        st.caption("Belinda (180)、Cetus (181)、Dione (182) 的連結持續保留，目前未發送連線查詢；開通後可勾選上方開關啟用同步。")

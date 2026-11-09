@@ -17,57 +17,10 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令
+# 💡 注入原生表格與按鈕樣式調校，確保維持老大的黑框高顏值星際風
 st.markdown("""
     <style>
-    .monitor-top-row {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 20px !important;
-        flex-wrap: wrap !important;
-        margin-bottom: 25px !important;
-    }
-    .universe-monitor-box {
-        border: 2px solid #ffffff !important;
-        background-color: rgba(14, 17, 23, 0.9) !important;
-        padding: 10px 15px !important;
-        border-radius: 4px !important;
-        text-align: center !important;
-        min-width: 125px !important;
-    }
-    .universe-title {
-        font-size: 18px !important;
-        font-weight: bold !important;
-        color: #ffffff !important;
-        font-family: 'Courier New', Courier, monospace !important;
-        margin-bottom: 4px !important;
-    }
-    .universe-count {
-        font-size: 12px !important;
-        color: #ffffff !important;
-    }
-    .universe-num {
-        font-size: 15px !important;
-        font-weight: bold !important;
-    }
-    .monitor-table-scroll { 
-        overflow-x: auto !important; 
-        width: 100% !important; 
-        margin-top: 10px !important;
-    }
-    .ogame-custom-table {
-        width: 100% !important;
-        min-width: 1000px !important;
-        color: white !important;
-        border-collapse: collapse !important;
-    }
-    .ogame-custom-table th, .ogame-custom-table td {
-        padding: 12px 10px !important;
-        text-align: left !important;
-        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-    }
+    /* 🎯 讓 Streamlit 原生重新整理按鈕外觀完美融入監控列 */
     div.stButton > button {
         height: 62px !important;
         width: 150px !important;
@@ -82,6 +35,32 @@ st.markdown("""
         background-color: #ffffff !important;
         color: black !important;
         border: 2px solid #ffffff !important;
+    }
+    
+    /* 🎯 精美黑框方塊的外觀樣式定義 */
+    .universe-monitor-box-fixed {
+        border: 2px solid #ffffff !important;
+        background-color: rgba(14, 17, 23, 0.9) !important;
+        padding: 10px 15px !important;
+        border-radius: 4px !important;
+        text-align: center !important;
+        min-width: 135px !important;
+        display: inline-block !important;
+    }
+    .universe-title-fixed {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #ffffff !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        margin-bottom: 4px !important;
+    }
+    .universe-count-fixed {
+        font-size: 12px !important;
+        color: #ffffff !important;
+    }
+    .universe-num-fixed {
+        font-size: 15px !important;
+        font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -101,7 +80,7 @@ if (ASSET_DIR / "orion.jpg").exists():
         </style>
     """, unsafe_allow_html=True)
 
-# 核心自動重新整理
+# 核心自動重新整理 (每 60 秒)
 if st_autorefresh is not None:
     st_autorefresh(interval=60000, key="datarefresh")
 
@@ -179,7 +158,7 @@ def fetch_and_collide_data():
             pass
     return status_dict, player_mode_dict, score_dict
 
-# 🛡️ 執行最安全的資料抓取與保底映射
+# 🛡️ 安全獲取即時大數據
 try:
     latest_status, latest_modes, latest_scores = fetch_and_collide_data()
 except Exception:
@@ -191,11 +170,11 @@ df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_mod
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
 
 def dynamic_threat_level(score):
-    if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">2千億級暴龍</span>'
-    elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">千億級金剛</span>'
-    elif score >= 10000000000: return '<span style="color:#ffa500;">●</span> <span style="color:#ffffff; font-weight:bold;">百億級巨鱷</span>'
-    elif score >= 1000000000: return '<span style="color:#00c0f2;">●</span> <span style="color:#ffffff; font-weight:bold;">近百億對手</span>'
-    else: return '<span style="color:#00f900;">●</span> <span style="color:#ffffff; font-weight:bold;">孵化中幼體</span>'
+    if score >= 200000000000: return '🔴 2千億級暴龍'
+    elif score >= 100000000000: return '🔴 千億級金剛'
+    elif score >= 10000000000: return '🟠 百億級巨鱷'
+    elif score >= 1000000000: return '🔵 近百億對手'
+    else: return '🟢 孵化中幼體'
 
 df_monsters["積分來源"] = df_monsters["ID"].apply(lambda x: "網站擷取" if x in latest_scores else "預設保底")
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
@@ -208,10 +187,40 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Belinda',
 count_c = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Cetus', na=False)])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Dione', na=False)])
 
-# === 🧱 網頁渲染 ===
-st.markdown(f'<div style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">{logo_html}<span style="font-size: 26px; font-weight: bold; color: white;">諸神黃昏：u10-TW FazoR 併服情報站</span></div>', unsafe_allow_html=True)
+# === 🧱 頁面上半部 ===
+st.markdown(f'<div style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">{logo_html}<span style="font-size: 26px; font-weight: bold; color: white; font-family: Microsoft JhengHei, sans-serif;">諸神黃昏：u10-TW FazoR 併服情報站</span></div>', unsafe_allow_html=True)
 st.markdown("---")
-st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：資料依統計網站更新進度同步；找不到玩家代表已遷徙或刪號，狀態將標記為已遷徙。</span>', unsafe_allow_html=True)
+st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：資料依統計網站更新進度同步；找不到玩家代表已遷徙或刪號，狀態將標記為「已遷徙或不明」。</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 📊 橫向頂部工具列
+
+# === 📊 中欄：全新升級「絕對安全一體流」橫向工具列 ===
+# 使用 Streamlit 內建的分欄並嚴格指定寬度比例，完全防範 HTML 標籤不對稱造成的隱漏
+tool_col1, tool_col2, tool_col3, tool_col4 = st.columns([1.5, 1.2, 1.2, 1.2])
+
+with tool_col1:
+    # 🎯 按鈕佔據最左側頭頂（精準扣齊黃色箭頭位置）
+    if st.button("🔄 立即重新整理"):
+        st.cache_data.clear()
+        st.rerun()
+
+with tool_col2:
+    st.markdown(f"""
+        <div class="universe-monitor-box-fixed">
+            <div class="universe-title-fixed">Belinda</div>
+            <div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_b}</span> 員</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with tool_col3:
+    st.markdown(f"""
+        <div class="universe-monitor-box-fixed">
+            <div class="universe-title-fixed">Cetus</div>
+            <div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_c}</span> 員</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with tool_col4:
+    st.markdown(f"""
+        <div class="universe-monitor-box-fixed">
+            <div class="universe-title-fixed">Dione</div>

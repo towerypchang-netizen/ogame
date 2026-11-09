@@ -110,8 +110,9 @@ if refresh_btn:
 
 # 整合最新動態情報
 df_monsters = get_monster_base_data()
-df_monsters["目前落腳新宇宙"] = df_monsters["ID"].map(st.session_state.current_status)
-df_monsters["當前玩家狀態"] = df_monsters["ID"].map(st.session_state.player_modes)
+# 💡 改用字典安全讀取，防範 Streamlit 雲端初始化對不上導致 KeyError
+df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.session_state.current_status.get(x, "未確認"))
+df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.player_modes.get(x, "未確認"))
 
 # 執行側邊欄篩選
 if target_universe != "全部宇宙":

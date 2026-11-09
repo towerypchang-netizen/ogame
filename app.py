@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import pandas as pd
 import requests
 import re
@@ -184,7 +184,7 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 💡 6. 核心佈局修正：將手誤的 st.columns() 焊死為正確的雙軌平分參數 st.columns(2)
+# 6. 核心佈局：左右雙軌平分流
 left_panel, right_panel = st.columns(2)
 
 # === 🧱 左側軌道：黑框白字直列監控艙 ===
@@ -209,7 +209,7 @@ with left_panel:
         </div>
     """, unsafe_allow_html=True)
 
-# === 📊 右側主軌道：天梯情報管理大表格 ===
+# === 📊 右側主軌道：天梯情報大表格 ===
 with right_panel:
     # 管制共 23 員計數
     st.markdown(f'<span style="color:#b0b3b8; font-size:14px; font-weight:bold;">管制共 {len(df_monsters)} 員</span>', unsafe_allow_html=True)

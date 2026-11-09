@@ -148,9 +148,7 @@ def fetch_and_collide_data():
     status_dict, player_mode_dict, score_dict = {}, {}, {}
     fetch_errors = []
     
-    # 🗺️ 星域對應：加入原舊宇宙（與新宇宙並行查詢，確保舊服能拉取到實時積分）
-    # 舊宇宙：Merkur(_139), Oberon(_151), Cosmos(_160)
-    # 新宇宙：Belinda(_180), Cetus(_181), Dione(_182)
+    # 🗺️ 星域對應：原舊宇宙（與新宇宙並行查詢）
     uni_mapping = {
         "139": "Merkur (139)", 
         "151": "Oberon (151)", 
@@ -160,17 +158,18 @@ def fetch_and_collide_data():
         "182": "Dione (182)"
     }
     
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
     
     for uni_id, uni_name in uni_mapping.items():
         try:
             url = "https://mmorpg-stat.eu"
+            # 加上更嚴格的超時控制 (連線 2 秒，讀取 3 秒)，防止整個網頁死鎖卡住
             response = requests.get(
                 url, params={"univers": f"_{uni_id}", "pays": 11, "stat": 0},
-                headers=headers, timeout=(3, 5)
+                headers=headers, timeout=(2, 3)
             )
             
-            # 若遇到新宇宙 403 錯誤，直接捕獲並跳過，不中斷舊宇宙數據獲取
+            # 若遇到新宇宙 403 錯誤，直接跳過
             if response.status_code == 403:
                 continue
                 
@@ -195,20 +194,24 @@ def fetch_and_collide_data():
                                 if clean_num > 100000000: 
                                     score_dict[monster_id] = clean_num
                                     
-        except requests.RequestException as exc:
+        except Exception as exc:
+            # 🛡️ 終極防崩潰盾牌：捕獲所有潛在的網路錯誤、逾時或解析錯誤，絕對不拖垮網頁渲染
             if "180" not in uni_id and "181" not in uni_id and "182" not in uni_id:
-                fetch_errors.append(f"{uni_name}：{exc}")
-        except (ValueError, TypeError) as exc:
-            fetch_errors.append(f"{uni_name}：資料解析失敗：{exc}")
+                fetch_errors.append(f"{uni_name} 連線失敗 (將使用預設保底數據)")
             
     return status_dict, player_mode_dict, score_dict, fetch_errors
 
-with st.spinner("讀取宇宙資料中…"):
-    latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
+# 🛡️ 用最外層 try...except 雙重焊死數據流，確保即使 fetch 函數本身出錯，網頁也絕對不會變成空白頁
+try:
+    with st.spinner("天網讀取宇宙資料中…"):
+        latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
+except Exception as global_err:
+    latest_status, latest_modes, latest_scores = {}, {}, {}
+    fetch_errors = [f"天網核心阻斷：已自動切換為全離線保底模式"]
 
 df_monsters = get_monster_base_data()
 
-# 🎯 執行全新業務邏輯：若玩家在新舊宇宙的網頁數據中完全搜尋不到，代表已遷徙或刪號，顯示為「已遷徙或不明」
+# 🎯 執行業務邏輯：若在新舊宇宙的即時網頁數據中都完全搜尋不到，代表已遷徙或刪號，顯示為「已遷徙或不明」
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
@@ -230,4 +233,3 @@ df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threa
 
 # 🧱 資料排序與格式化
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")

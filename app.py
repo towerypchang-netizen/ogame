@@ -17,7 +17,7 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（只留方塊樣式，移除會導致破圖的 Grid 佈局）
+# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（排除任何干擾 Grid，僅保留區塊基礎美化）
 st.markdown("""
     <style>
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
@@ -148,7 +148,7 @@ def fetch_and_collide_data():
     status_dict, player_mode_dict, score_dict = {}, {}, {}
     fetch_errors = []
     
-    # 🗺️ 星域對應：原舊宇宙（與新宇宙並行查詢）
+    # 🗺️ 星域對應：原舊宇宙與新宇宙查詢通道
     uni_mapping = {
         "139": "Merkur (139)", 
         "151": "Oberon (151)", 
@@ -163,13 +163,11 @@ def fetch_and_collide_data():
     for uni_id, uni_name in uni_mapping.items():
         try:
             url = "https://mmorpg-stat.eu"
-            # 加上更嚴格的超時控制 (連線 2 秒，讀取 3 秒)，防止整個網頁死鎖卡住
             response = requests.get(
                 url, params={"univers": f"_{uni_id}", "pays": 11, "stat": 0},
                 headers=headers, timeout=(2, 3)
             )
             
-            # 若遇到新宇宙 403 錯誤，直接跳過
             if response.status_code == 403:
                 continue
                 
@@ -195,23 +193,22 @@ def fetch_and_collide_data():
                                     score_dict[monster_id] = clean_num
                                     
         except Exception as exc:
-            # 🛡️ 終極防崩潰盾牌：捕獲所有潛在的網路錯誤、逾時或解析錯誤，絕對不拖垮網頁渲染
             if "180" not in uni_id and "181" not in uni_id and "182" not in uni_id:
-                fetch_errors.append(f"{uni_name} 連線失敗 (將使用預設保底數據)")
+                fetch_errors.append(f"{uni_name} 連線失敗 (使用保底數據)")
             
     return status_dict, player_mode_dict, score_dict, fetch_errors
 
-# 🛡️ 用最外層 try...except 雙重焊死數據流，確保即使 fetch 函數本身出錯，網頁也絕對不會變成空白頁
+# 🛡️ 用外層 try 焊死數據流，預防拉取異常造成破圖
 try:
     with st.spinner("天網讀取宇宙資料中…"):
         latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
 except Exception as global_err:
     latest_status, latest_modes, latest_scores = {}, {}, {}
-    fetch_errors = [f"天網核心阻斷：已自動切換為全離線保底模式"]
+    fetch_errors = ["天網異常：已自動切換為全離線保底模式"]
 
 df_monsters = get_monster_base_data()
 
-# 🎯 執行業務邏輯：若在新舊宇宙的即時網頁數據中都完全搜尋不到，代表已遷徙或刪號，顯示為「已遷徙或不明」
+# 🎯 業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
@@ -233,3 +230,6 @@ df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threa
 
 # 🧱 資料排序與格式化
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
+df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
+df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]]
+

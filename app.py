@@ -17,7 +17,7 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令
+# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（完美剔除可能造成衝突的霸道全局寬度）
 st.markdown("""
     <style>
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
@@ -46,19 +46,20 @@ st.markdown("""
         font-weight: bold !important;
     }
     
+    /* 🖥️ 完美的橫向溢出滾動外殼，徹底杜絕 React DOM 隱藏崩潰 */
     .monitor-table-scroll { 
-        overflow-x: auto; 
-        width: 100%; 
+        overflow-x: auto !important; 
+        width: 100% !important; 
     }
     
     /* 修正表格文字與對齊，確保高亮 */
-    table {
-        width: 100% !important;
+    .ogame-custom-table {
+        min-width: 900px !important;
         color: white !important;
         border-collapse: collapse !important;
     }
-    th, td {
-        padding: 8px !important;
+    .ogame-custom-table th, .ogame-custom-table td {
+        padding: 10px 8px !important;
         text-align: left !important;
         border-bottom: 1px solid rgba(255,255,255,0.1) !important;
     }
@@ -148,7 +149,6 @@ def fetch_and_collide_data():
     status_dict, player_mode_dict, score_dict = {}, {}, {}
     fetch_errors = []
     
-    # 🗺️ 星域對應：原舊宇宙與新宇宙查詢通道
     uni_mapping = {
         "139": "Merkur (139)", 
         "151": "Oberon (151)", 
@@ -198,13 +198,13 @@ def fetch_and_collide_data():
             
     return status_dict, player_mode_dict, score_dict, fetch_errors
 
-# 🛡️ 用外層 try 焊死數據流，預防拉取異常造成破圖
+# 🛡️ 天網雙重保護層
 try:
     with st.spinner("天網讀取宇宙資料中…"):
         latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
 except Exception as global_err:
     latest_status, latest_modes, latest_scores = {}, {}, {}
-    fetch_errors = ["天網異常：已自動切換為全離線保底模式"]
+    fetch_errors = ["天網異常：已自動重置離線保底數據"]
 
 df_monsters = get_monster_base_data()
 
@@ -212,12 +212,12 @@ df_monsters = get_monster_base_data()
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
 
-# 🛡️ 關鍵修正：強制轉型為 int64，杜絕千分位格式化時引發隱性 React DOM 卡死
+# 強制執行類型轉換
 df_monsters["實時總積分"] = df_monsters.apply(
     lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1
 ).astype('int64')
 
-# 純 HTML 實心圓點指示燈，白字鎖定
+# 純 HTML 實心圓點指示燈
 def dynamic_threat_level(score):
     if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">2千億級暴龍</span>'
     elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">千億級金剛</span>'
@@ -234,6 +234,4 @@ df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threa
 
 # 🧱 資料排序與格式化
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-
-# 安全執行字串格式化轉換
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")

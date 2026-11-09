@@ -107,8 +107,8 @@ def get_monster_base_data():
         # === Oberon 服 ===
         {"ID": "Paris", "原宇宙": "Oberon", "保底積分": 240000000000, "備註": "Bug堆積天花板，兩千億大暴龍"},
         {"ID": "Glauconome", "原宇宙": "Oberon", "保底積分": 15000000000, "備註": "Oberon 指標核心巨鱷"},
-        {"ID": "CCTV77", "原宇宙": "Oberon", "保底積分": 13500000000, "備鱷": "Oberon 核心編隊巨鱷"},
-        {"ID": "Lord Patator", "原宇宙": "Oberon", "保底積分": 12000000000, "備註": "頂級高分玩家巨鱷"},
+        {"ID": "CCTV77", "原宇宙": "Oberon", "保底積分": 13500000000, "備註": "Oberon 核心編隊巨鱷"},
+        {"ID": "Lord Patator", "原宇宙": "Oberon", "保底積分": 12000000000, "備跡": "頂級高分玩家巨鱷"},
         {"ID": "Thorfinn", "原宇宙": "Oberon", "保底積分": 11000000000, "備註": "戰力不可小覷的巨鱷"},
         
         # === Cosmos 服 ===
@@ -161,7 +161,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 💡 完美修補：修正變數拼標錯字，讓天梯絕對依照分數由高到低原地排列
+# 確保天梯絕對依照分數由高到低原地排列
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
@@ -184,17 +184,9 @@ st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# === 📊 下半部動態組裝層：排除變數干擾，改用最萬無一失的純 HTML Grid 注入！ ===
-left_html = f"""
-    <div style="display: flex; flex-direction: column;">
-        <div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div></div>
-        <div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div></div>
-        <div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div></div>
-    </div>
-"""
+# === 📊 下半部全局實裝：採用單行拼接流，徹底免除引號未閉合 Bug！ ===
+left_html = '<div style="display: flex; flex-direction: column;"><div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_b) + '</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_c) + '</span> 員</div></div><div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num">' + str(count_d) + '</span> 員</div></div></div>'
 
-# 💡 核心修正：移除 right_html 最前端多餘的字母 f，防止內部 HTML 標籤遭到二次轉義外露！
 table_html = df_filtered.to_html(escape=False, index=False)
-right_html = f"""
-    <div style="display: flex; flex-direction: column; width: 100%;">
-        <div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div>
+right_html = '<div style="display: flex; flex-direction: column; width: 100%;"><div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 ' + str(len(df_monsters)) + ' 員</div><div style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 15px;">🪟 即時監控情報管理表</div>' + table_html + '</div>'
+

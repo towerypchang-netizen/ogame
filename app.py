@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 
 # 1. 網頁頁面配置
 st.set_page_config(page_title="OGame TW 巨鱷動態情報站", page_icon="🪐", layout="wide")

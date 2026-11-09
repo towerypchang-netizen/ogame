@@ -13,7 +13,7 @@ st.sidebar.header("📡 情報控制中心")
 target_universe = st.sidebar.selectbox("切換觀測新宇宙", ["全部宇宙", "Belinda (180)", "Cetus (181)", "Dione (182)"])
 refresh_btn = st.sidebar.button("🔄 立即同步最新情報 (發動數據碰撞)")
 
-# 3. 核心監控巨鱷名單基底 (已整合全新22位群鱷名單，並自動去重)
+# 3. 核心監控巨鱷名單基底
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 / SOS 陣列及其死盟 ===
@@ -50,7 +50,8 @@ def get_monster_base_data():
 # 4. 核心功能：線上數據打撈與碰撞模組
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    status_dict = {m: "未確認 (流亡中)" for m in base_df["ID"].tolist()}
+    # 藍框處修改：初始未確認狀態
+    status_dict = {m: "未確認" for m in base_df["ID"].tolist()}
     
     uni_mapping = {
         "180": "Belinda (180)",
@@ -62,7 +63,6 @@ def fetch_and_collide_data():
     
     for uni_id, uni_name in uni_mapping.items():
         try:
-            # 建立 mmorpg-stat 台灣區最新服排行網址
             url = f"https://mmorpg-stat.eu{uni_id}&pays=11&stat=0"
             response = requests.get(url, headers=headers, timeout=10)
             
@@ -78,12 +78,12 @@ def fetch_and_collide_data():
             
     return status_dict
 
-# 5. 初始化與狀態記憶 (動態配對，防止名單去重漏抓)
+# 5. 初始化與狀態記憶 (確保全名單對齊，消滅 None)
 if "current_status" not in st.session_state:
     base_df = get_monster_base_data()
-    st.session_state.current_status = {m: "未確認 (流亡中)" for m in base_df["ID"].tolist()}
+    st.session_state.current_status = {m: "未確認" for m in base_df["ID"].tolist()}
 
-# 按鈕觸發：抓取新服實時數據
+# 按鈕觸發
 if refresh_btn:
     with st.spinner("正在向 mmorpg-stat 高速抓取新服實時排行進行數據碰撞..."):
         latest_status = fetch_and_collide_data()
@@ -100,19 +100,19 @@ if target_universe != "全部宇宙":
 else:
     df_filtered = df_monsters
 
-# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流，100% 精準縮小)
+# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨鱷</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
 
 with col2:
-    count_b = len(df_monsters[df_monsters['currently_status'] == 'Belinda (180)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 
 with col3:
     count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 员</span></div>', unsafe_allow_html=True)
 
 with col4:
     count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
@@ -133,7 +133,6 @@ st.markdown("---")
 st.markdown("### 📌 戰略備忘錄")
 tabs = st.tabs(["📊 實時觀察手記", "🔗 官方情報源一鍵查"])
 
-# 💡 這裡加上 [0] 和 [1] 修正 TypeError
 with tabs[0]:
     st.write("💡 **老狼生存提醒：**")
     st.write("1. 今晚 19:00 之後，請每隔幾小時點擊一次左側 **[🔄 立即同步最新情報]** 按鈕。")

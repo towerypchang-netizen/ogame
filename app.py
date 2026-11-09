@@ -8,6 +8,26 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
+# 💡 終極大絕：注入全站 CSS 覆寫，物理性強制將 Streamlit 內置的所有橫向區塊通通塞往最左邊！
+st.markdown("""
+    <style>
+    /* 鎖定自訂計數器區塊，強力拔除官方外殼的所有強制攤平設定 */
+    .custom-counter-container {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 50px !important;
+        text-align: left !important;
+        width: 100% !important;
+    }
+    /* 強制消滅 Streamlit 內層區塊可能產生的置中推擠間距 */
+    div[data-testid="stMarkdownContainer"] > div {
+        text-align: left !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 if os.path.exists("orion.jpg"):
     import base64
     with open("orion.jpg", "rb") as image_file:
@@ -34,7 +54,7 @@ st.markdown("---")
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
-        {"ID": "WindAngelX", "原宇宙": "Merkur", "保底積分": 250000000000, "備註": "SOS 聯盟核心，超走兩千億終極大暴龍"},
+        {"ID": "WindAngelX", "原宇宙": "Merkur", "保底積分": 250000000000, "備註": "SOS 聯盟核心，超兩千億終極大暴龍"},
         {"ID": "Satan", "原宇宙": "Merkur", "保底積分": 65000000000, "備註": "老牌高軍分狼，百億級巨鱷"},
         {"ID": "Musashi", "原宇宙": "Merkur", "保底積分": 45000000000, "備註": "武藏，破壞力極強的巨鱷"},
         {"ID": "Coon", "原宇宙": "Merkur", "保底積分": 12000000000, "備註": "Merkur 指標戰力鱷"},
@@ -130,9 +150,9 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 6. 💡 上半部：實時動態分流計數器 (改用純 HTML Flexbox 降維流，100% 絕對往左緊密吸附對齊)
+# 6. 💡 上半部：實時動態分流計數器 (套用 class="custom-counter-container" 強制與最頂部的全站 CSS 連動)
 st.markdown(f"""
-    <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: center; gap: 45px; text-align: left;">
+    <div class="custom-counter-container">
         <div>
             <span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br>
             <span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span>

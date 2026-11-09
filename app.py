@@ -14,47 +14,45 @@ st.sidebar.header("📡 情報控制中心")
 target_universe = st.sidebar.selectbox("切換觀測新宇宙", ["全部宇宙", "Belinda (180)", "Cetus (181)", "Dione (182)"])
 refresh_btn = st.sidebar.button("🔄 立即同步最新情報 (發動數據碰撞)")
 
-# 3. 核心監控巨鱷名單基底
+# 3. 核心監控巨鱷名單基底 (改用數字星星分級標籤，完美封殺前端點擊排序Bug)
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 / SOS 陣列及其死盟 ===
-        {"ID": "WindAngelX", "原宇宙": "Merkur", "威脅程度": "🔴 極高 (千億級)", "備註": "SOS 聯盟核心"},
-        {"ID": "Satan", "原宇宙": "Merkur", "威脅程度": "🔴 極高", "備註": "老牌高軍分狼"},
-        {"ID": "Musashi", "原宇宙": "Merkur", "威脅程度": "🟡 高", "備註": "武藏，破壞力強"},
-        {"ID": "Coon", "原宇宙": "Merkur", "威脅程度": "🟡 高", "備註": "Merkur 指標戰力"},
-        {"ID": "BabyShark dododo", "原宇宙": "Merkur", "威脅程度": "🟡 高", "備註": "Merkur 指標戰力"},
-        {"ID": "Captain Teemo", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "Lucifer", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "TumaNaomi", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "cotyledon", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "tom12345", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "yoshino", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "Hambeard", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
-        {"ID": "Slime", "原宇宙": "Merkur", "威脅程度": "🔵 中高", "備註": "Merkur 核心編隊"},
+        {"ID": "WindAngelX", "原宇宙": "Merkur", "威脅程度": "4.🔴⭐⭐⭐⭐ (千億)", "備註": "SOS 聯盟核心"},
+        {"ID": "Satan", "原宇宙": "Merkur", "威脅程度": "3.🔴⭐⭐⭐", "備註": "老牌高軍分狼"},
+        {"ID": "Musashi", "原宇宙": "Merkur", "威脅程度": "2.🟡⭐⭐", "備註": "武藏，破壞力強"},
+        {"ID": "Coon", "原宇宙": "Merkur", "威脅程度": "2.🟡⭐⭐", "備註": "Merkur 指標戰力"},
+        {"ID": "BabyShark dododo", "原宇宙": "Merkur", "威脅程度": "2.🟡⭐⭐", "備註": "Merkur 指標戰力"},
+        {"ID": "Captain Teemo", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "Lucifer", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "TumaNaomi", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "cotyledon", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "tom12345", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "yoshino", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "Hambeard", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
+        {"ID": "Slime", "原宇宙": "Merkur", "威脅程度": "1.🔵⭐", "備註": "Merkur 核心編隊"},
         
         # === Oberon 服 / 頂天神仙陣列 ===
-        {"ID": "Paris", "原宇宙": "Oberon", "威脅程度": "🔴 極高 (千億級)", "備註": "Bug堆積疑慮天花板"},
-        {"ID": "Glauconome", "原宇宙": "Oberon", "威脅程度": "🟡 高", "備註": "Oberon 指標核心"},
-        {"ID": "CCTV77", "原宇宙": "Oberon", "威脅程度": "🟡 高", "備註": "Oberon 核心編隊"},
-        {"ID": "Lord Patator", "原宇宙": "Oberon", "威脅程度": "🟡 高", "備註": "頂級高分玩家"},
-        {"ID": "Thorfinn", "原宇宙": "Oberon", "威脅程度": "🟡 高", "備註": "戰力不可小覷"},
+        {"ID": "Paris", "原宇宙": "Oberon", "威脅程度": "4.🔴⭐⭐⭐⭐ (千億)", "備註": "Bug堆積疑慮天花板"},
+        {"ID": "Glauconome", "原宇宙": "Oberon", "威脅程度": "2.🟡⭐⭐", "備註": "Oberon 指標核心"},
+        {"ID": "CCTV77", "原宇宙": "Oberon", "威脅程度": "2.🟡⭐⭐", "備註": "Oberon 核心編隊"},
+        {"ID": "Lord Patator", "原宇宙": "Oberon", "威脅程度": "2.🟡⭐⭐", "備註": "頂級高分玩家"},
+        {"ID": "Thorfinn", "原宇宙": "Oberon", "威脅程度": "2.🟡⭐⭐", "備註": "戰力不可小覷"},
         
         # === Cosmos 服 / 頭號威脅陣列 ===
-        {"ID": "ATRAGON", "原宇宙": "Cosmos", "威脅程度": "🔴 極高", "備註": "Cosmos 服頭號威脅"},
-        {"ID": "Kinopio", "原宇宙": "Cosmos", "威脅程度": "🟡 高", "備註": "Cosmos 指標核心"},
-        {"ID": "FUIYOH", "原宇宙": "Cosmos", "威脅程度": "🟡 高", "備註": "Cosmos 核心玩家"},
-        {"ID": "Chief Halo", "原宇宙": "Cosmos", "威脅程度": "🔵 中高", "備註": "Cosmos 核心玩家"},
-        {"ID": "President Zenith", "原宇宙": "Cosmos", "威脅程度": "🔵 中高", "備註": "Cosmos 核心玩家"}
+        {"ID": "ATRAGON", "原宇宙": "Cosmos", "威脅程度": "3.🔴⭐⭐⭐", "備註": "Cosmos 服頭號威脅"},
+        {"ID": "Kinopio", "原宇宙": "Cosmos", "威脅程度": "2.🟡⭐⭐", "備註": "Cosmos 指標核心"},
+        {"ID": "FUIYOH", "原宇宙": "Cosmos", "威脅程度": "2.🟡⭐⭐", "備註": "Cosmos 核心玩家"},
+        {"ID": "Chief Halo", "原宇宙": "Cosmos", "威脅程度": "1.🔵⭐", "備註": "Cosmos 核心玩家"},
+        {"ID": "President Zenith", "原宇宙": "Cosmos", "威脅程度": "1.🔵⭐", "備註": "Cosmos 核心玩家"}
     ]
     return pd.DataFrame(monsters)
 
 # 4. 核心功能：線上數據打撈與狀態解碼模組
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    
-    # 建立兩個追蹤記憶：一個追宇宙，一個追玩家狀態
     status_dict = {m: "未確認" for m in base_df["ID"].tolist()}
-    player_mode_dict = {m: "正常" for m in base_df["ID"].tolist()}
+    player_mode_dict = {m: "未確認" for m in base_df["ID"].tolist()}
     
     uni_mapping = {
         "180": "Belinda (180)",
@@ -77,8 +75,7 @@ def fetch_and_collide_data():
                         if monster_id in table_str:
                             status_dict[monster_id] = uni_name
                             
-                            # 💡 核心黑科技：用正規表達式去抓取 ID 後方的狀態括號
-                            # 尋找像 WindAngelX(v) 或 WindAngelX (i) 這樣的特徵
+                            # 嗅探並解碼玩家假期 (v) 或不活躍 (i) 狀態
                             pattern = rf"{re.escape(monster_id)}\s*\(([vVvIiI]+)\)"
                             match = re.search(pattern, table_str)
                             if match:
@@ -110,7 +107,6 @@ if refresh_btn:
 
 # 整合最新動態情報
 df_monsters = get_monster_base_data()
-# 💡 改用字典安全讀取，防範 Streamlit 雲端初始化對不上導致 KeyError
 df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.session_state.current_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.player_modes.get(x, "未確認"))
 
@@ -123,33 +119,26 @@ else:
 # 重排表格順序，把狀態欄挪到顯眼的位置
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "威脅程度", "備註"]]
 
-# 💡 核心修正：強制定義威脅程度的戰略排序權重
-threat_mapping = {
-    "🔴 極高 (千億級)": 1,
-    "🔴 極高": 2,
-    "🟡 高": 3,
-    "🔵 中高": 4
-}
-# 根據權重進行排序，保證「高」永遠在「中高」的前面！
-df_filtered['sort_key'] = df_filtered['威脅程度'].map(threat_mapping)
-df_filtered = df_filtered.sort_values(by='sort_key').drop(columns=['sort_key'])
+# 💡 終極修正：預設讓表格按照威脅程度從大到小排序（4星排最上面，且完全相容前端滑鼠點擊切換）
+df_filtered = df_filtered.sort_values(by='威脅程度', ascending=False)
 
-# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
+# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流，100% 精準縮小)
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨鱷</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
 
 with col2:
-    count_b = len(df_monsters[df_monsters['currently_status'] == 'Belinda (180)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 
 with col3:
-    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
 
 with col4:
     count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)

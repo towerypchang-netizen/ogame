@@ -48,34 +48,26 @@ def get_monster_base_data():
     ]
     return pd.DataFrame(monsters)
 
-# 4. 核心功能：新宇宙動態嗅探與網頁解析
+# 4. 核心功能：新宇宙動態嗅探
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    
     status_dict = {}
     player_mode_dict = {}
     score_dict = {}
     
-    uni_mapping = {
-        "180": "Belinda (180)",
-        "181": "Cetus (181)",
-        "182": "Dione (182)"
-    }
-    
+    uni_mapping = {"180": "Belinda (180)", "181": "Cetus (181)", "182": "Dione (182)"}
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     
     for uni_id, uni_name in uni_mapping.items():
         try:
             url = f"https://mmorpg-stat.eu{uni_id}&pays=11&stat=0"
             response = requests.get(url, headers=headers, timeout=10)
-            
             if response.status_code == 200:
                 lines = response.text.split('\n')
                 for line in lines:
                     for monster_id in base_df["ID"].tolist():
                         if monster_id in line:
                             status_dict[monster_id] = uni_name
-                            
                             if f"{monster_id}(v)" in line.replace(" ", ""):
                                 player_mode_dict[monster_id] = "🏖️ 假期 (v)"
                             elif f"{monster_id}(i)" in line.replace(" ", ""):
@@ -90,15 +82,12 @@ def fetch_and_collide_data():
                                     score_dict[monster_id] = clean_num
         except Exception:
             pass
-            
     return status_dict, player_mode_dict, score_dict
 
-# 5. 初始化暫存記憶
 if "live_status" not in st.session_state: st.session_state.live_status = {}
 if "live_modes" not in st.session_state: st.session_state.live_modes = {}
 if "live_scores" not in st.session_state: st.session_state.live_scores = {}
 
-# 按鈕點擊事件
 if refresh_btn:
     with st.spinner("正在向 mmorpg-stat 跨宇宙發動數據碰撞與嗅探..."):
         latest_status, latest_modes, latest_scores = fetch_and_collide_data()
@@ -107,59 +96,43 @@ if refresh_btn:
         st.session_state.live_scores = latest_scores
         st.success("數據碰撞完成！最新獵場動態已同步。")
 
-# 強制組裝表格
 df_monsters = get_monster_base_data()
 df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.session_state.live_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.live_modes.get(x, "未確認"))
+df_monsters["實時總積分"] = df_monsters.apply(lambda r: st.session_state.live_scores.get(r["ID"], r["保底積分"]), axis=1)
 
-# 保底積分強制執行
-df_monsters["實時總積分"] = df_monsters.apply(
-    lambda r: st.session_state.live_scores.get(r["ID"], r["保底積分"]), axis=1
-)
-
-# 💡 依照指示：全面換成最純正、絕不出錯的實心圓型警報呼吸燈
+# 💡 終極降維流：改用純 HTML 實心圓點編碼，徹底消滅鋸子 Bug
 def dynamic_threat_level(score):
-    if score >= 200000000000: return "🔴 2千億級暴龍"
-    elif score >= 100000000000: return "🔴 千億級金剛"
-    elif score >= 10000000000: return "🟡 百億級巨鱷"
-    elif score >= 1000000000: return "🔵 近百億對手"
-    elif score > 0: return "🟢 孵化中幼體"
-    else: return "⚪ 等待數據同步"
+    if score >= 200000000000: return '<span style="color:#ff4b4b; font-weight:bold;">● 2千億級暴龍</span>'
+    elif score >= 100000000000: return '<span style="color:#ff4b4b; font-weight:bold;">● 千億級金剛</span>'
+    elif score >= 10000000000: return '<span style="color:#ffa500; font-weight:bold;">● 百億級巨鱷</span>'
+    elif score >= 1000000000: return '<span style="color:#00c0f2; font-weight:bold;">● 近百億對手</span>'
+    elif score > 0: return '<span style="color:#00g900; font-weight:bold;">● 孵化中幼體</span>'
+    else: return '<span style="color:#ffffff;">○ 等待數據同步</span>'
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 執行側邊欄篩選
 if target_universe != "全部宇宙":
     df_filtered = df_monsters[df_monsters["目前落腳新宇宙"] == target_universe]
 else:
     df_filtered = df_monsters
 
-# 依照實時總積分進行絕對天梯排序
 df_filtered = df_filtered.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
-
-# 重排前台顯示欄位
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
-# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
+# 6. 上半部：實時戰略儀表板
 col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
-with col2:
-    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
-with col3:
-    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
-with col4:
-    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
+with col1: st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
+with col2: count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
+with col3: count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Cetus (181)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
+with col4: count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Dione (182)']); st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 7. 中半部：即時情報管理表格
+# 7. 中半部：即時情報管理表格 (改用 to_html 渲染以完美支持 HTML 紅黃藍圓燈點亮)
 st.markdown("### 🪟 即時監控情報管理表")
-st.dataframe(df_filtered, use_container_width=True, hide_index=True)
+st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # 8. 下半部：情報備忘
 st.markdown("---")

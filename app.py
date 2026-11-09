@@ -34,7 +34,7 @@ st.markdown("---")
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
-        {"ID": "WindAngelX", "原宇宙": "Merkur", "保底積分": 250000000000, "備註": "SOS 聯盟核心，超兩千億終極大暴龍"},
+        {"ID": "WindAngelX", "原宇宙": "Merkur", "保底積分": 250000000000, "備註": "SOS 聯盟核心，超走兩千億終極大暴龍"},
         {"ID": "Satan", "原宇宙": "Merkur", "保底積分": 65000000000, "備註": "老牌高軍分狼，百億級巨鱷"},
         {"ID": "Musashi", "原宇宙": "Merkur", "保底積分": 45000000000, "備註": "武藏，破壞力極強的巨鱷"},
         {"ID": "Coon", "原宇宙": "Merkur", "保底積分": 12000000000, "備註": "Merkur 指標戰力鱷"},
@@ -60,7 +60,7 @@ def get_monster_base_data():
         {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備註": "Cosmos 指標核心巨鱷"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "保底積分": 14500000000, "備註": "Cosmos 核心玩家巨鱷"},
         {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備註": "Cosmos 核心玩家鯊魚"},
-        {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備謎": "Cosmos 核心玩家鯊魚"}
+        {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備註": "Cosmos 核心玩家鯊魚"}
     ]
     return pd.DataFrame(monsters)
 
@@ -125,22 +125,32 @@ df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
-# 6. 💡 上半部：實時動態分流計數器 (改用精準配比 [1, 1.2, 1.2, 1.2, 3] 強制將黃框數據往左側靠攏)
-col1, col2, col3, col4, col5 = st.columns([1, 1.2, 1.2, 1.2, 3])
+# 計算各新宇宙進駐人數
+count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
+count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
+count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-with col1: 
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
-with col2: 
-    count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
-with col3: 
-    count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
-with col4: 
-    count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
-with col5:
-    st.write("") # 隱形防護罩欄位，負責撐開右側多餘空間
+# 6. 💡 上半部：實時動態分流計數器 (改用純 HTML Flexbox 降維流，100% 絕對往左緊密吸附對齊)
+st.markdown(f"""
+    <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: center; gap: 45px; text-align: left;">
+        <div>
+            <span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br>
+            <span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span>
+        </div>
+        <div>
+            <span style="font-size: 13px; color: #ffffff;">已進駐 Belinda (180)</span><br>
+            <span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span>
+        </div>
+        <div>
+            <span style="font-size: 13px; color: #ffffff;">已進駐 Cetus (181)</span><br>
+            <span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span>
+        </div>
+        <div>
+            <span style="font-size: 13px; color: #ffffff;">已進駐 Dione (182)</span><br>
+            <span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 

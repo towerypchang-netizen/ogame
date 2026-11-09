@@ -17,7 +17,7 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（排除任何干擾 Grid，僅保留區塊基礎美化）
+# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令
 st.markdown("""
     <style>
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
@@ -211,7 +211,11 @@ df_monsters = get_monster_base_data()
 # 🎯 業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
-df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
+
+# 🛡️ 關鍵修正：強制轉型為 int64，杜絕千分位格式化時引發隱性 React DOM 卡死
+df_monsters["實時總積分"] = df_monsters.apply(
+    lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1
+).astype('int64')
 
 # 純 HTML 實心圓點指示燈，白字鎖定
 def dynamic_threat_level(score):
@@ -230,6 +234,6 @@ df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threa
 
 # 🧱 資料排序與格式化
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
-df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]]
 
+# 安全執行字串格式化轉換
+df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")

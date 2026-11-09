@@ -182,12 +182,14 @@ st.markdown("---")
 st.markdown("### 📌 戰略備忘錄")
 tabs = st.tabs(["📊 實時觀察手記", "🔗 官方情報源一鍵查"])
 
-with tabs:
+# 💡 這裡加上 [0]
+with tabs[0]:
     st.write("💡 **老狼生存提醒：**")
     st.write("1. 19:00 併服流亡入口已全面開啟！請定時點擊左側按鈕發動數據碰撞。")
     st.write("2. 威脅分級已全面依指示正名為 **『暴龍、金剛、巨鱷、對手』**，回歸最真實的星際獵場規格。")
     st.write("3. 點擊任何標題皆相容前端點擊排序，數據完全精準對齊。")
 
-with tabs:
+# 💡 這裡加上 [1]，徹底修復 TypeError
+with tabs[1]:
     st.markdown("- [mmorpg-stat 全球數據庫首頁](https://mmorpg-stat.eu)")
     st.markdown("- [OGame TW 官方論壇存檔看板](https://gameforge.com)")

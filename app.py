@@ -17,7 +17,7 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」與 HTML Grid 雙軌並列布局的 CSS 樣式律令
+# 💡 注入專屬黑框白字「星域監控艙」的純 CSS 樣式律令（只留方塊樣式，移除會導致破圖的 Grid 佈局）
 st.markdown("""
     <style>
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
@@ -27,7 +27,7 @@ st.markdown("""
         padding: 15px 10px !important;
         border-radius: 4px !important;
         text-align: center !important;
-        width: 125px !important;
+        width: 135px !important;
         margin-bottom: 20px !important;
     }
     .universe-title {
@@ -46,22 +46,11 @@ st.markdown("""
         font-weight: bold !important;
     }
     
-    /* 💡 HTML Grid 焊死左右雙軌並列，大表格絕對不掉落 */
-    .tianwang-main-layout {
-        display: grid !important;
-        grid-template-columns: 160px minmax(0, 1fr) !important;
-        gap: 35px !important;
-        align-items: start !important;
-        width: 100% !important;
+    .monitor-table-scroll { 
+        overflow-x: auto; 
+        width: 100%; 
     }
     
-    @media (max-width: 800px) {
-        .tianwang-main-layout {
-            grid-template-columns: minmax(0, 1fr) !important;
-            gap: 15px !important;
-        }
-    }
-    .monitor-table-scroll { overflow-x: auto; width: 100%; }
     /* 修正表格文字與對齊，確保高亮 */
     table {
         width: 100% !important;
@@ -74,14 +63,14 @@ st.markdown("""
         border-bottom: 1px solid rgba(255,255,255,0.1) !important;
     }
     
-    /* 讓 Streamlit 原生按鈕完美貼合監控艙寬度的樣式調校 */
+    /* 讓 Streamlit 原生重新整理按鈕外觀完美契合黑框風格 */
     div.stButton > button {
-        width: 149px !important;
+        width: 159px !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
         color: white !important;
         border: 1px solid #ffffff !important;
         border-radius: 4px !important;
-        margin-bottom: 10px !important;
+        font-weight: bold !important;
     }
     div.stButton > button:hover {
         background-color: #ffffff !important;
@@ -233,3 +222,12 @@ def dynamic_threat_level(score):
     elif score > 0: return '<span style="color:#00f900;">●</span> <span style="color:#ffffff; font-weight:bold;">孵化中幼體</span>'
     else: return '<span style="color:#ffffff;">○</span> <span style="color:#ffffff;">等待數據同步</span>'
 
+df_monsters["積分來源"] = df_monsters["ID"].apply(
+    lambda player: "網站擷取" if player in latest_scores else "預設保底（非即時）"
+)
+
+df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
+
+# 🧱 資料排序與格式化
+df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
+df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")

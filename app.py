@@ -3,12 +3,13 @@ import pandas as pd
 import requests
 import re
 import os
+import base64
 from streamlit_autorefresh import st_autorefresh
 
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 終極天網大絕：注入專屬黑框白字「星域監控艙」的 CSS 樣式律令
+# 💡 注入專屬黑框白字「星域監控艙」的 CSS 樣式律令
 st.markdown("""
     <style>
     /* 物理消滅 Streamlit 預設多餘間距，讓左右雙軌靠得更緊湊 */
@@ -44,14 +45,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# 注入 orion.jpg 背景底圖
 if os.path.exists("orion.jpg"):
-    import base64
     with open("orion.jpg", "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode()
+        encoded_bg = base64.b64encode(image_file.read()).decode()
     st.markdown(f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(14, 17, 23, 0.85), rgba(14, 17, 23, 0.85)), url(data:image/jpeg;base64,{encoded_string});
+            background-image: linear-gradient(rgba(14, 17, 23, 0.85), rgba(14, 17, 23, 0.85)), url(data:image/jpeg;base64,{encoded_bg});
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -62,7 +63,26 @@ if os.path.exists("orion.jpg"):
 # 核心進化：啟動 60 秒全自動天網重新整理內核
 st_autorefresh(interval=60000, key="datarefresh")
 
-# 3. 核心監控巨鱷名單基底 (共 23 員鎖定)
+# 💡 核心進化：將 logo.png 轉化為 base64 碼以達成 HTML 完美並列不換行
+logo_html = ""
+if os.path.exists("logo.png"):
+    with open("logo.png", "rb") as logo_file:
+        encoded_logo = base64.b64encode(logo_file.read()).decode()
+    # 微調圖片高度為 65px，使其與後方文字完美等高並列
+    logo_html = f'<img src="data:image/png;base64,{encoded_logo}" style="height: 65px; margin-right: 20px; vertical-align: middle;">'
+
+# 🎯 利用 Flexbox 讓官方 Logo 與 FazoR 專屬戰略標題在同一行完美合體
+st.markdown(f"""
+    <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: center; margin-top: 10px; margin-bottom: 10px;">
+        {logo_html}
+        <span style="font-size: 26px; font-weight: bold; color: white; font-family: Microsoft JhengHei, sans-serif;">
+            諸神黃昏：u10-TW FazoR 併服情報站
+        </span>
+    </div>
+""", unsafe_allow_html=True)
+st.markdown("---")
+
+# 3. 核心監控巨鱷名單基底
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
@@ -89,14 +109,14 @@ def get_monster_base_data():
         
         # === Cosmos 服 ===
         {"ID": "ATRAGON", "原宇宙": "Cosmos", "保底積分": 287209472520, "備註": "Cosmos服二千八百億遠古殘暴龍"},
-        {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備註": "Cosmos 指標核心巨鱷"},
+        {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備鱷": "Cosmos 指標核心巨鱷"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "保底積分": 14500000000, "備註": "Cosmos 核心玩家巨鱷"},
         {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備註": "Cosmos 核心玩家鯊魚"},
         {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備註": "Cosmos 核心玩家鯊魚"}
     ]
     return pd.DataFrame(monsters)
 
-# 4. 核心功能：背景全自動線上數據嗅探
+# 4. 核心功能：新宇宙動態嗅探
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
     status_dict = {}
@@ -116,7 +136,6 @@ def fetch_and_collide_data():
                     for monster_id in base_df["ID"].tolist():
                         if monster_id in line:
                             status_dict[monster_id] = uni_name
-                            
                             if f"{monster_id}(v)" in line.replace(" ", ""):
                                 player_mode_dict[monster_id] = "🏖️ 假期 (v)"
                             elif f"{monster_id}(i)" in line.replace(" ", ""):
@@ -162,31 +181,24 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 💡 6. 核心佈局進化：發動 [1, 7] 雙軌黃金比例並列流
-left_panel, right_panel = st.columns([1, 7])
+# 6. 核心佈局：發動 雙軌黃金比例並列流
+left_panel, right_panel = st.columns([1, 6]) # 調整比例讓左直列監控艙更加緊湊
 
-# === 🧱 左側軌道：焊死老大專屬的黑框白字直列監控艙 ===
+# === 🧱 左側軌道：黑框白字直列監控艙 ===
 with left_panel:
-    # 為了對齊右側標題，上方稍微預留空隙
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    
-    # 監控艙 1：Belinda
     st.markdown(f"""
         <div class="universe-monitor-box">
             <div class="universe-title">Belinda</div>
             <div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    # 監控艙 2：Cetus
     st.markdown(f"""
         <div class="universe-monitor-box">
             <div class="universe-title">Cetus</div>
             <div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    # 監控艙 3：Dione
     st.markdown(f"""
         <div class="universe-monitor-box">
             <div class="universe-title">Dione</div>
@@ -194,12 +206,8 @@ with left_panel:
         </div>
     """, unsafe_allow_html=True)
 
-# === 📊 右側主軌道：鋪滿標題與數據管理大表格 ===
+# === 📊 右側主軌道：天梯情報管理大表格 ===
 with right_panel:
-    # 專屬天網標題
-    st.markdown("### 🪐 OGame-TW 諸神黃昏：u10-TW FazoR 情報站")
-    st.markdown("---")
-    
     # 管制共 23 員計數
     st.markdown(f'<span style="color:#b0b3b8; font-size:14px; font-weight:bold;">管制共 {len(df_monsters)} 員</span>', unsafe_allow_html=True)
     

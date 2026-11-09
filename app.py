@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import pandas as pd
 import requests
 import re
@@ -81,7 +81,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 st.markdown("---")
 
-# 💡 依照指示移上來的「戰略備忘錄警示列」：焊死在標題正下方！
+# 戰略備忘錄警示列：焊死在標題正下方！
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -184,8 +184,8 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 6. 核心佈局：發動 雙軌黃金比例並列流
-left_panel, right_panel = st.columns()
+# 💡 6. 核心佈局修正：將手誤的 st.columns() 焊死為正確的雙軌平分參數 st.columns(2)
+left_panel, right_panel = st.columns(2)
 
 # === 🧱 左側軌道：黑框白字直列監控艙 ===
 with left_panel:

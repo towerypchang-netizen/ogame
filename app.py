@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import re
 
 # 1. 網頁頁面配置
 st.set_page_config(page_title="OGame TW 巨鱷動態情報站", page_icon="🪐", layout="wide")
@@ -47,11 +48,13 @@ def get_monster_base_data():
     ]
     return pd.DataFrame(monsters)
 
-# 4. 核心功能：線上數據打撈與碰撞模組
+# 4. 核心功能：線上數據打撈與狀態解碼模組
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    # 藍框處修改：初始未確認狀態
+    
+    # 建立兩個追蹤記憶：一個追宇宙，一個追玩家狀態
     status_dict = {m: "未確認" for m in base_df["ID"].tolist()}
+    player_mode_dict = {m: "正常" for m in base_df["ID"].tolist()}
     
     uni_mapping = {
         "180": "Belinda (180)",
@@ -73,32 +76,51 @@ def fetch_and_collide_data():
                     for monster_id in status_dict.keys():
                         if monster_id in table_str:
                             status_dict[monster_id] = uni_name
+                            
+                            # 💡 核心黑科技：用正規表達式去抓取 ID 後方的狀態括號
+                            # 尋找像 WindAngelX(v) 或 WindAngelX (i) 這樣的特徵
+                            pattern = rf"{re.escape(monster_id)}\s*\(([vVvIiI]+)\)"
+                            match = re.search(pattern, table_str)
+                            if match:
+                                mode = match.group(1).lower()
+                                if 'v' in mode:
+                                    player_mode_dict[monster_id] = "🏖️ 假期 (v)"
+                                elif 'i' in mode:
+                                    player_mode_dict[monster_id] = "💤 不活躍 (i)"
+                            else:
+                                player_mode_dict[monster_id] = "🟢 線上/正常"
         except Exception as e:
             pass
             
-    return status_dict
+    return status_dict, player_mode_dict
 
-# 5. 初始化與狀態記憶 (確保全名單對齊，消滅 None)
+# 5. 初始化與狀態記憶
 if "current_status" not in st.session_state:
     base_df = get_monster_base_data()
     st.session_state.current_status = {m: "未確認" for m in base_df["ID"].tolist()}
+    st.session_state.player_modes = {m: "未確認" for m in base_df["ID"].tolist()}
 
 # 按鈕觸發
 if refresh_btn:
-    with st.spinner("正在向 mmorpg-stat 高速抓取新服實時排行進行數據碰撞..."):
-        latest_status = fetch_and_collide_data()
+    with st.spinner("正在向 mmorpg-stat 高速抓取新服實時排行進行數據碰撞與狀態解碼..."):
+        latest_status, latest_modes = fetch_and_collide_data()
         st.session_state.current_status = latest_status
-        st.success("數據碰撞完成！最新亮燈名單已同步。")
+        st.session_state.player_modes = latest_modes
+        st.success("數據碰撞完成！最新亮燈名單與玩家狀態已同步。")
 
 # 整合最新動態情報
 df_monsters = get_monster_base_data()
 df_monsters["目前落腳新宇宙"] = df_monsters["ID"].map(st.session_state.current_status)
+df_monsters["當前玩家狀態"] = df_monsters["ID"].map(st.session_state.player_modes)
 
 # 執行側邊欄篩選
 if target_universe != "全部宇宙":
     df_filtered = df_monsters[df_monsters["目前落腳新宇宙"] == target_universe]
 else:
     df_filtered = df_monsters
+
+# 重排表格順序，把狀態欄挪到顯眼的位置
+df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "威脅程度", "備註"]]
 
 # 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
 col1, col2, col3, col4 = st.columns(4)
@@ -107,12 +129,12 @@ with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨鱷</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
 
 with col2:
-    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    count_b = len(df_monsters[df_monsters['currently_status'] == 'Belinda (180)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 
 with col3:
     count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
-    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 员</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
 
 with col4:
     count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
@@ -136,8 +158,8 @@ tabs = st.tabs(["📊 實時觀察手記", "🔗 官方情報源一鍵查"])
 with tabs[0]:
     st.write("💡 **老狼生存提醒：**")
     st.write("1. 今晚 19:00 之後，請每隔幾小時點擊一次左側 **[🔄 立即同步最新情報]** 按鈕。")
-    st.write("2. 若目標巨鱷在 `mmorpg-stat` 上衝進前 100 名，本表將會**自動從『未確認』變更為對應新宇宙**。")
-    st.write("3. 11/12 19:00 前，只要看見這群怪物大量朝 Cetus 亮燈，我們就往 Dione 撤退；反之亦然。")
+    st.write("2. 若目標巨鱷在 `mmorpg-stat` 上衝進前 100 名，本表將會**自動亮燈**並顯示其最新落腳宇宙。")
+    st.write("3. 新增的 **[當前玩家狀態]** 欄位會自動解碼顯示其是否為 🏖️假期 或 💤不活躍，方便老大判斷死活。")
 
 with tabs[1]:
     st.markdown("- [mmorpg-stat 全球數據庫首頁](https://mmorpg-stat.eu)")

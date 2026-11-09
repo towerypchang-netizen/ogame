@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入專屬黑框白字「星域監控艙」的 CSS 樣式律令
+# 💡 注入專屬黑框白字「星域監控艙」與 HTML Grid 雙軌並列布局的 CSS 樣式
 st.markdown("""
     <style>
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
@@ -156,7 +156,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實清總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0") if '實清總積分' in locals() else df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
+df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
 count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
@@ -177,26 +177,22 @@ st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# === 📊 下半部全局實裝：利用純 HTML Grid 容器將「左直列監控艙」與「右大表格」綁死在同一個行內！ ===
-# 💡 終極修正：補齊結幕引號與括號，徹底碾碎 SyntaxError！
-st.markdown(f"""
-    <div class="tianwang-main-layout">
-        <!-- 🧱 左側軌道 -->
-        <div style="display: flex; flex-direction: column;">
-            <div class="universe-monitor-box">
-                <div class="universe-title">Belinda</div>
-                <div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div>
-            </div>
-            <div class="universe-monitor-box">
-                <div class="universe-title">Cetus</div>
-                <div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div>
-            </div>
-            <div class="universe-monitor-box">
-                <div class="universe-title">Dione</div>
-                <div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div>
-            </div>
-        </div>
-        
-        <!-- 📊 右側主軌道 -->
-        <div style="display: flex; flex-direction: column; width: 100%;">
-            <div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div>
+# === 💡 7. 下半部安全拆分流：拒絕對齊複雜雙引號，分段包裝 HTML，100% 絕對亮燈！ ===
+left_html = f"""
+    <div style="display: flex; flex-direction: column;">
+        <div class="universe-monitor-box"><div class="universe-title">Belinda</div><div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div></div>
+        <div class="universe-monitor-box"><div class="universe-title">Cetus</div><div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div></div>
+        <div class="universe-monitor-box"><div class="universe-title">Dione</div><div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div></div>
+    </div>
+"""
+
+right_html = f"""
+    <div style="display: flex; flex-direction: column; width: 100%;">
+        <div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div>
+        <div style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 15px;">🪟 即時監控情報管理表</div>
+        {df_filtered.to_html(escape=False, index=False)}
+    </div>
+"""
+
+# 將分開裝好的兩段 HTML，用最乾淨的一行 Grid 外殼組裝合併，徹底再見 SyntaxError！
+st.markdown(f'<div class="tianwang-main-layout">{left_html}{right_html}</div>', unsafe_allow_html=True)

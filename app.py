@@ -86,14 +86,21 @@ else:
     df_filtered = df_monsters
 
 # 6. 上半部：實時戰略儀表板
-# 6. 上半部：實時戰略儀表板
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] {
-        font-size: 22px !important;  /* 數字縮小到 22px，看起來更緊湊 */
+    /* 強制覆寫 Metric 的超大數字值 */
+    div[class*="stMetricValue"] > div {
+        font-size: 20px !important;   /* 強制縮小數字到 20px，比剛才再精緻一點 */
+        font-weight: 700 !important;
     }
-    [data-testid="stMetricLabel"] {
-        font-size: 13px !important;  /* 標題文字縮小到 13px */
+    /* 強制覆寫 Metric 的上方小標題 */
+    div[class*="stMetricLabel"] > div {
+        font-size: 13px !important;   /* 強制小標題維持在 13px */
+        color: #b0b3b8 !important;   /* 讓標題顏色稍微調淡，看起來更像專業後台 */
+    }
+    /* 移除過大的上下間距，讓畫面更緊湊 */
+    div[data-testid="stMetricVideo"] {
+        padding: 0px !important;
     }
     </style>
 """, unsafe_allow_html=True)

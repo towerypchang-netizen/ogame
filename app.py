@@ -12,10 +12,6 @@ st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layo
 # 💡 注入專屬黑框白字「星域監控艙」的 CSS 樣式律令
 st.markdown("""
     <style>
-    /* 物理消滅 Streamlit 預設多餘間距，讓左右雙軌靠得更緊湊 */
-    [data-testid="stHorizontalBlock"] {
-        gap: 25px !important;
-    }
     /* 🎯 專屬打造老大截圖中的黑框白字星域監控艙外殼 */
     .universe-monitor-box {
         border: 2px solid #ffffff !important;
@@ -41,6 +37,21 @@ st.markdown("""
         font-size: 15px !important;
         font-weight: bold !important;
         color: #ffffff !important;
+    }
+    
+    /* 💡 終極降維黑科技：利用標準 HTML Grid 焊死左右雙軌並列，表格絕對不會再往下掉！ */
+    .tianwang-main-layout {
+        display: grid !important;
+        grid-template-columns: 160px 1fr !important;  /* 左軌固定 160px，右軌佔滿全螢幕剩下空間 */
+        gap: 30px !important;
+        align-items: start !important;
+        width: 100% !important;
+    }
+    
+    /* 修正表格文字與對齊 */
+    table {
+        width: 100% !important;
+        color: white !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -70,22 +81,7 @@ if os.path.exists("logo.png"):
         encoded_logo = base64.b64encode(logo_file.read()).decode()
     logo_html = f'<img src="data:image/png;base64,{encoded_logo}" style="height: 65px; margin-right: 20px; vertical-align: middle;">'
 
-# 🎯 利用 Flexbox 讓官方 Logo 與 FazoR 專屬戰略標題在同一行完美合體
-st.markdown(f"""
-    <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: center; margin-top: 10px; margin-bottom: 10px;">
-        {logo_html}
-        <span style="font-size: 26px; font-weight: bold; color: white; font-family: Microsoft JhengHei, sans-serif;">
-            諸神黃昏：u10-TW FazoR 併服情報站
-        </span>
-    </div>
-""", unsafe_allow_html=True)
-st.markdown("---")
-
-# 戰略備忘錄警示列：焊死在標題正下方！
-st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
-st.markdown("<br>", unsafe_allow_html=True)
-
-# 3. 核心監控巨鱷名單基底
+# 🎯 數據處理層
 def get_monster_base_data():
     monsters = [
         # === Merkur 服 ===
@@ -119,16 +115,11 @@ def get_monster_base_data():
     ]
     return pd.DataFrame(monsters)
 
-# 4. 核心功能：新宇宙動態嗅探
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    status_dict = {}
-    player_mode_dict = {}
-    score_dict = {}
-    
+    status_dict, player_mode_dict, score_dict = {}, {}, {}
     uni_mapping = {"180": "Belinda (180)", "181": "Cetus (181)", "182": "Dione (182)"}
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    
     for uni_id, uni_name in uni_mapping.items():
         try:
             url = f"https://mmorpg-stat.eu{uni_id}&pays=11&stat=0"
@@ -139,31 +130,22 @@ def fetch_and_collide_data():
                     for monster_id in base_df["ID"].tolist():
                         if monster_id in line:
                             status_dict[monster_id] = uni_name
-                            if f"{monster_id}(v)" in line.replace(" ", ""):
-                                player_mode_dict[monster_id] = "🏖️ 假期 (v)"
-                            elif f"{monster_id}(i)" in line.replace(" ", ""):
-                                player_mode_dict[monster_id] = "💤 不活躍 (i)"
-                            else:
-                                player_mode_dict[monster_id] = "🟢 線上/正常"
-                                
+                            if f"{monster_id}(v)" in line.replace(" ", ""): player_mode_dict[monster_id] = "🏖️ 假期 (v)"
+                            elif f"{monster_id}(i)" in line.replace(" ", ""): player_mode_dict[monster_id] = "💤 不活躍 (i)"
+                            else: player_mode_dict[monster_id] = "🟢 線上/正常"
                             numbers = re.findall(r'\d[\d\s\.]{5,}', line)
                             for num_str in numbers:
                                 clean_num = int(re.sub(r'[\s\.]', '', num_str))
-                                if clean_num > 100000000:
-                                    score_dict[monster_id] = clean_num
-        except Exception:
-            pass
+                                if clean_num > 100000000: score_dict[monster_id] = clean_num
+        except Exception: pass
     return status_dict, player_mode_dict, score_dict
 
-# 5. 背景自動執行打撈
 latest_status, latest_modes, latest_scores = fetch_and_collide_data()
-
 df_monsters = get_monster_base_data()
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: latest_scores.get(r["ID"], r["保底積分"]), axis=1)
 
-# 純 HTML 實心圓點指示燈，白字鎖定
 def dynamic_threat_level(score):
     if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">2千億級暴龍</span>'
     elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">千億級金剛</span>'
@@ -173,46 +155,48 @@ def dynamic_threat_level(score):
     else: return '<span style="color:#ffffff;">○</span> <span style="color:#ffffff;">等待數據同步</span>'
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
-
-# 全螢幕預設全部顯示排序
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
 df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
-# 計算各新宇宙進駐人數
 count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 💡 6. 核心佈局黄微調：給予 1 比 6 的黃金差額配比，強力留出超大寬度給右側大表格！
-left_panel, right_panel = st.columns([1, 6])
+# === 🧱 頁面上半部：經典官方 Logo 與 FazoR 標題、火箭警示列 ===
+st.markdown(f"""
+    <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: center; margin-top: 10px; margin-bottom: 10px;">
+        {logo_html}
+        <span style="font-size: 26px; font-weight: bold; color: white; font-family: Microsoft JhengHei, sans-serif;">
+            諸神黃昏：u10-TW FazoR 併服情報站
+        </span>
+    </div>
+""", unsafe_allow_html=True)
+st.markdown("---")
 
-# === 🧱 左側軌道：黑框白字直列監控艙 ===
-with left_panel:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown(f"""
-        <div class="universe-monitor-box">
-            <div class="universe-title">Belinda</div>
-            <div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div>
-        </div>
-    """, unsafe_allow_html=True)
-    st.markdown(f"""
-        <div class="universe-monitor-box">
-            <div class="universe-title">Cetus</div>
-            <div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div>
-        </div>
-    """, unsafe_allow_html=True)
-    st.markdown(f"""
-        <div class="universe-monitor-box">
-            <div class="universe-title">Dione</div>
-            <div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div>
-        </div>
-    """, unsafe_allow_html=True)
+st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
-# === 📊 右側主軌道：天梯情報管理大表格 ===
-with right_panel:
-    # 管制共 23 員計數
-    st.markdown(f'<span style="color:#b0b3b8; font-size:14px; font-weight:bold;">管制共 {len(df_monsters)} 員</span>', unsafe_allow_html=True)
-    
-    # 中半部：即時情報管理表格 (HTML 強制高亮渲染)
-    st.markdown("### 🪟 即時監控情報管理表")
+# === 💡 7. 下半部全局實裝：利用純 HTML Grid 容器將「左直列監控艙」與「右大表格」綁死在同一個行內！ ===
+# 將所有資料渲染包進同一個 Grid 網格中，這下誰都別想往下掉！
+st.markdown(f"""
+    <div class="tianwang-main-layout">
+        <!-- 🧱 左側軌道：黑框白字直列監控艙 -->
+        <div style="display: flex; flex-direction: column;">
+            <div class="universe-monitor-box">
+                <div class="universe-title">Belinda</div>
+                <div class="universe-count">已進駐 <span class="universe-num">{count_b}</span> 員</div>
+            </div>
+            <div class="universe-monitor-box">
+                <div class="universe-title">Cetus</div>
+                <div class="universe-count">已進駐 <span class="universe-num">{count_c}</span> 員</div>
+            </div>
+            <div class="universe-monitor-box">
+                <div class="universe-title">Dione</div>
+                <div class="universe-count">已進駐 <span class="universe-num">{count_d}</span> 員</div>
+            </div>
+        </div>
+        
+        <!-- 📊 右側主軌道：天梯大表格 -->
+        <div style="display: flex; flex-direction: column; width: 100%;">
+            <div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div>

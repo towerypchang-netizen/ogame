@@ -90,7 +90,7 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("鎖定監控巨鱷", f"{len(df_monsters)} 員")
 col2.metric("已進駐 Belinda (180)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])} 員")
 col3.metric("已進駐 Cetus (181)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])} 員")
-col4.metric("已進駐 Dione (182)", f"{len(df_monsters[df_monsters['品質落腳新宇宙'] == 'Dione (182)'])} 員")
+col4.metric("已進駐 Dione (182)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])} 員")
 
 st.markdown("### 📡 即時監控情報管理表")
 # 渲染高顏值管理表格

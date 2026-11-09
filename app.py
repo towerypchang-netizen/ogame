@@ -8,21 +8,19 @@ from streamlit_autorefresh import st_autorefresh
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 終極大絕：注入全站 CSS 覆寫，物理性強制將 Streamlit 內置的所有橫向區塊通通塞往最左邊！
+# 💡 終極天網大絕：將橫向平分完全打破，強制定義垂直直列式監控面板的 HTML 樣式
 st.markdown("""
     <style>
-    /* 鎖定自訂計數器區塊，強力拔除官方外殼的所有強制攤平設定 */
-    .custom-counter-container {
+    .custom-vertical-panel {
         display: flex !important;
-        flex-direction: row !important;
+        flex-direction: column !important;  /* 💡 強制由上到下直列式排列！ */
         justify-content: flex-start !important;
-        align-items: center !important;
-        gap: 50px !important;
+        align-items: flex-start !important;
+        gap: 12px !important;                 /* 各個直列項目之間的上下舒適間距 */
         text-align: left !important;
-        width: 100% !important;
+        padding-bottom: 20px !important;
     }
-    /* 強制消滅 Streamlit 內層區塊可能產生的置中推擠間距 */
-    div[data-testid="stMarkdownContainer"] > div {
+    .custom-vertical-item {
         text-align: left !important;
     }
     </style>
@@ -150,24 +148,24 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
 count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
-# 6. 💡 上半部：實時動態分流計數器 (套用 class="custom-counter-container" 強制與最頂部的全站 CSS 連動)
+# 6. 💡 上半部：實時動態垂直分流面板 (物理性卡死為由上到下的全直列式排版)
 st.markdown(f"""
-    <div class="custom-counter-container">
-        <div>
-            <span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br>
-            <span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span>
+    <div class="custom-vertical-panel">
+        <div class="custom-vertical-item">
+            <span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸：</span>
+            <span style="font-size: 18px; font-weight: 700; color: white;">{len(df_monsters)} 員</span>
         </div>
-        <div>
-            <span style="font-size: 13px; color: #ffffff;">已進駐 Belinda (180)</span><br>
-            <span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span>
+        <div class="custom-vertical-item">
+            <span style="font-size: 13px; color: #b0b3b8;">落腳星域狀態：</span>
+            <span style="font-size: 14px; color: #ffffff;">已進駐 Belinda (180) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_b} 員</span>
         </div>
-        <div>
-            <span style="font-size: 13px; color: #ffffff;">已進駐 Cetus (181)</span><br>
-            <span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span>
+        <div class="custom-vertical-item">
+            <span style="font-size: 13px; color: #b0b3b8;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span style="font-size: 14px; color: #ffffff;">已進駐 Cetus (181) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_c} 員</span>
         </div>
-        <div>
-            <span style="font-size: 13px; color: #ffffff;">已進駐 Dione (182)</span><br>
-            <span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span>
+        <div class="custom-vertical-item">
+            <span style="font-size: 13px; color: #b0b3b8;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span style="font-size: 14px; color: #ffffff;">已進駐 Dione (182) ➔ </span><span style="font-size: 16px; font-weight: 700; color: white;">{count_d} 員</span>
         </div>
     </div>
 """, unsafe_allow_html=True)

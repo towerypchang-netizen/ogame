@@ -147,7 +147,7 @@ def get_monster_base_data():
         {"ID": "ATRAGON", "原宇宙": "Cosmos", "保底積分": 287209472520, "備註": "Cosmos服二千八百億遠古殘暴龍"},
         {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備註": "Cosmos 指標核心巨鱷"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "保底積分": 14500000000, "備註": "Cosmos 核心玩家巨鱷"},
-        {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備鱷": "Cosmos 核心玩家鯊魚"},
+        {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備註": "Cosmos 核心玩家鯊魚"},
         {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備註": "Cosmos 核心玩家鯊魚"}
     ]
     return pd.DataFrame(monsters)
@@ -177,8 +177,6 @@ def fetch_and_collide_data():
                 headers=headers, timeout=(2, 3)
             )
             
-            if response.status_code == 403:
-                continue
                 
             response.raise_for_status()
             if response.status_code == 200:
@@ -201,27 +199,11 @@ def fetch_and_collide_data():
                                 if clean_num > 100000000: 
                                     score_dict[monster_id] = clean_num
                                     
-        except Exception as exc:
-            if "180" not in uni_id and "181" not in uni_id and "182" not in uni_id:
-                fetch_errors.append(f"{uni_name} 連線失敗 (使用保底數據)")
+        except (requests.RequestException, ValueError, TypeError) as exc:
+            fetch_errors.append(f"{uni_name}：{type(exc).__name__}：{exc}")
             
     return status_dict, player_mode_dict, score_dict, fetch_errors
 
-# 🛡️ 啟動純函數級防護盾，阻絕緩存鎖死
-latest_status, latest_modes, latest_scores = {}, {}, {}
-try:
-    latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
-except Exception:
-    fetch_errors = ["天網核心快取隔離：已載入歷史保底戰力資料庫"]
-
-df_monsters = get_monster_base_data()
-
-# 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
-df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
-df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "已遷徙或不明"))
-df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
-
-# 純 HTML 實心指示燈，修正回歸自訂 Table 機制
 def dynamic_threat_level(score):
     if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> 2千億級暴龍'
     elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> 千億級金剛'
@@ -229,11 +211,86 @@ def dynamic_threat_level(score):
     elif score >= 1000000000: return '<span style="color:#00c0f2;">●</span> 近百億對手'
     else: return '<span style="color:#00f900;">●</span> 孵化中幼體'
 
+
+# 先建立畫面，再讀取網站，避免等待期間只看到背景。
+st.markdown(
+    f'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">'
+    f'{logo_html}<h2 style="color:white;">諸神黃昏：u10-TW FazoR 併服情報站</h2></div>',
+    unsafe_allow_html=True,
+)
+st.caption("資料依統計網站更新；未取得積分時顯示預設值。正常狀態不代表目前在線。")
+if st_autorefresh is None:
+    st.caption("未安裝 streamlit-autorefresh，目前使用手動更新。")
+left_column, right_column = st.columns([1, 6])
+with left_column:
+    if st.button("立即重新整理"):
+        fetch_and_collide_data.clear()
+monitor_slot = left_column.empty()
+table_slot = right_column.empty()
+notice_slot = st.empty()
+
+
+def render_monitor_table(frame):
+    with monitor_slot.container():
+        for universe in ("Belinda (180)", "Cetus (181)", "Dione (182)"):
+            count = int((frame["落腳新宇宙"] == universe).sum())
+            st.markdown(
+                '<div class="universe-monitor-box-vertical">'
+                f'<div class="universe-title-fixed">{escape(universe.split()[0])}</div>'
+                f'<div class="universe-count-fixed">已確認 <span class="universe-num-fixed">{count}</span> 員</div>'
+                '</div>', unsafe_allow_html=True,
+            )
+    columns = ["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]
+    display_frame = frame.sort_values("實時總積分", ascending=False)[columns].copy()
+    display_frame["實時總積分"] = display_frame["實時總積分"].map(lambda score: f"{score:,}")
+    for column in columns:
+        if column != "威脅程度":
+            display_frame[column] = display_frame[column].map(lambda value: escape(str(value)))
+    table = display_frame.to_html(index=False, escape=False, classes="ogame-final-universe-table", border=0)
+    html = (
+        f'<div style="color:white;">管制共 {len(frame)} 員</div>'
+        '<h3 style="color:white;">即時監控情報管理表</h3>'
+        f'<div class="monitor-table-container-scroll">{table}</div>'
+    )
+    table_slot.markdown("".join(line.strip() for line in html.splitlines()), unsafe_allow_html=True)
+
+
+fallback = get_monster_base_data()
+fallback["落腳新宇宙"] = "未確認"
+fallback["當前玩家狀態"] = "未確認"
+fallback["實時總積分"] = fallback["保底積分"]
+fallback["積分來源"] = "預設保底（非即時）"
+fallback["威脅程度"] = fallback["實時總積分"].apply(dynamic_threat_level)
+render_monitor_table(fallback)
+notice_slot.info("正在讀取統計網站；表格已先載入預設資料。")
+
+# 取得資料後更新表格
+latest_status, latest_modes, latest_scores = {}, {}, {}
+try:
+    latest_status, latest_modes, latest_scores, fetch_errors = fetch_and_collide_data()
+except Exception as exc:
+    fetch_errors = [f"資料讀取失敗，使用預設保底資料：{type(exc).__name__}：{exc}"]
+
+df_monsters = get_monster_base_data()
+
+# 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
+df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認"))
+df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
+df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
+
+# 純 HTML 實心指示燈，修正回歸自訂 Table 機制
 df_monsters["積分來源"] = df_monsters["ID"].apply(
-    lambda player: "網站擷取" if player in latest_scores else "預設保底（非即時）"
+    lambda player: "網站擷取（待核對）" if player in latest_scores else "預設保底（非即時）"
 )
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
-# 🧱 資料排序與千分位轉化
-df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
+render_monitor_table(df_monsters)
+if fetch_errors:
+    notice_slot.warning("部分統計資料讀取失敗，未取得的積分顯示預設值。已確認人數不代表實際進駐總人數。")
+    with st.expander("查看資料讀取錯誤"):
+        for error in fetch_errors:
+            st.text(error)
+elif not latest_status:
+    notice_slot.warning("網站請求完成，但未辨識到追蹤玩家；目前顯示預設資料，無法據此判斷遷徙狀態。")
+else:
+    notice_slot.info("網站擷取結果仍需核對；未確認的位置不代表玩家尚未遷入。")

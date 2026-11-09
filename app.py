@@ -2,11 +2,30 @@ import streamlit as st
 import pandas as pd
 import requests
 import re
+import os
 
-# 1. 網頁頁面配置
-st.set_page_config(page_title="OGame TW 巨鱷動態情報站", page_icon="🪐", layout="wide")
+# 1. 網頁頁面配置與底圖注入
+st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-st.markdown("### 🪐 OGame-TW 諸神黃昏：千億巨鱷動態情報站")
+# 💡 核心黑科技：強行注入 "orion.jpg" 作為情報站的戰略科幻背景底圖
+# 設定半透明度 (opacity) 確保不影響前台數據管理表格的文字閱讀
+if os.path.exists("orion.jpg"):
+    import base64
+    with open("orion.jpg", "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+    st.markdown(f"""
+        <style>
+        .stApp {{
+            background-image: linear-gradient(rgba(14, 17, 23, 0.85), rgba(14, 17, 23, 0.85)), url(data:image/jpeg;base64,{encoded_string});
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
+# 💡 依照指示修改為專屬標題
+st.markdown("### 🪐 OGame-TW 諸神黃昏：u10-TW FazoR 情報站")
 st.markdown("---")
 
 # 2. 側邊欄：戰略主控台
@@ -101,14 +120,20 @@ df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.sess
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.live_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: st.session_state.live_scores.get(r["ID"], r["保底積分"]), axis=1)
 
-# 💡 終極降維流：改用純 HTML 實心圓點編碼，徹底消滅鋸子 Bug
+# 💡 依照指示微調：圓點依等級變色，但後方文字強制鎖定為白字（color: #ffffff）
 def dynamic_threat_level(score):
-    if score >= 200000000000: return '<span style="color:#ff4b4b; font-weight:bold;">● 2千億級暴龍</span>'
-    elif score >= 100000000000: return '<span style="color:#ff4b4b; font-weight:bold;">● 千億級金剛</span>'
-    elif score >= 10000000000: return '<span style="color:#ffa500; font-weight:bold;">● 百億級巨鱷</span>'
-    elif score >= 1000000000: return '<span style="color:#00c0f2; font-weight:bold;">● 近百億對手</span>'
-    elif score > 0: return '<span style="color:#00g900; font-weight:bold;">● 孵化中幼體</span>'
-    else: return '<span style="color:#ffffff;">○ 等待數據同步</span>'
+    if score >= 200000000000: 
+        return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">2千億級暴龍</span>'
+    elif score >= 100000000000: 
+        return '<span style="color:#ff4b4b;">●</span> <span style="color:#ffffff; font-weight:bold;">千億級金剛</span>'
+    elif score >= 10000000000: 
+        return '<span style="color:#ffa500;">●</span> <span style="color:#ffffff; font-weight:bold;">百億級巨鱷</span>'
+    elif score >= 1000000000: 
+        return '<span style="color:#00c0f2;">●</span> <span style="color:#ffffff; font-weight:bold;">近百億對手</span>'
+    elif score > 0: 
+        return '<span style="color:#00f900;">●</span> <span style="color:#ffffff; font-weight:bold;">孵化中幼體</span>'
+    else: 
+        return '<span style="color:#ffffff;">○</span> <span style="color:#ffffff;">等待數據同步</span>'
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
@@ -118,7 +143,7 @@ else:
     df_filtered = df_monsters
 
 df_filtered = df_filtered.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
+df_filtered["實時總積分"] = df_filtered["實清總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0") if '實清總積分' in locals() else df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
 # 6. 上半部：實時戰略儀表板
@@ -130,7 +155,7 @@ with col4: count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 7. 中半部：即時情報管理表格 (改用 to_html 渲染以完美支持 HTML 紅黃藍圓燈點亮)
+# 7. 中半部：即時情報管理表格 (HTML 強制渲染)
 st.markdown("### 🪟 即時監控情報管理表")
 st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
 

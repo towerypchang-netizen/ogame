@@ -47,25 +47,12 @@ def get_monster_base_data():
 # 4. 核心功能：實時總積分、狀態、新舊宇宙雙重自動打撈模組
 def fetch_and_collide_data():
     base_df = get_monster_base_data()
-    
     status_dict = {m: "未確認" for m in base_df["ID"].tolist()}
     player_mode_dict = {m: "未確認" for m in base_df["ID"].tolist()}
     score_dict = {m: 0 for m in base_df["ID"].tolist()}
     
-    # 新目標宇宙映射
-    new_uni_mapping = {
-        "180": "Belinda (180)",
-        "181": "Cetus (181)",
-        "182": "Dione (182)"
-    }
-    
-    # 舊母服宇宙代碼映射 (用於新服查不到時的「原宇宙保底機制」)
-    # 根據 OGame 官方編號：Merkur=165, Oberon=167, Cosmos=168 (或對應的多國聯合服代碼)
-    old_uni_mapping = {
-        "Merkur": "_1165",
-        "Oberon": "_1167",
-        "Cosmos": "_1168"
-    }
+    new_uni_mapping = {"180": "Belinda (180)", "181": "Cetus (181)", "182": "Dione (182)"}
+    old_uni_mapping = {"Merkur": "_1165", "Oberon": "_1167", "Cosmos": "_1168"}
     
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     
@@ -97,16 +84,14 @@ def fetch_and_collide_data():
         except Exception:
             pass
 
-    # === 🦖 第二階段：原宇宙保底防機制 (若新宇宙沒分，直接去舊服抓分) ===
+    # === 🦖 第二階段：原宇宙歷史數據保底 ===
     for m_id in score_dict.keys():
-        if score_dict[m_id] == 0:  # 新服還查不到資料
+        if score_dict[m_id] == 0:
             try:
-                # 找出這隻恐龍的原宇宙名
                 m_row = base_df[base_df["ID"] == m_id].iloc[0]
                 old_uni_name = m_row["原宇宙"]
                 old_uni_code = old_uni_mapping.get(old_uni_name, "_1165")
                 
-                # 爬取 mmorpg-stat 舊宇宙歷史存檔排行
                 url = f"https://mmorpg-stat.eu{old_uni_code}&pays=11&stat=0"
                 response = requests.get(url, headers=headers, timeout=10)
                 if response.status_code == 200:
@@ -115,16 +100,13 @@ def fetch_and_collide_data():
                     for row in rows:
                         row_text = row.get_text()
                         if m_id in row_text:
-                            if status_dict[m_id] == "未確認":
-                                status_dict[m_id] = f"未確認 (原宇宙)"
-                            
-                            if player_mode_dict[m_id] == "未確認":
-                                if f"{m_id}(v)" in row_text.replace(" ", ""):
-                                    player_mode_dict[m_id] = "🏖️ 假期 (v)"
-                                elif f"{m_id}(i)" in row_text.replace(" ", ""):
-                                    player_mode_dict[m_id] = "💤 不活躍 (i)"
-                                else:
-                                    player_mode_dict[m_id] = "🟢 線上/正常"
+                            status_dict[m_id] = "未確認 (抓取原宇宙數據)"
+                            if f"{m_id}(v)" in row_text.replace(" ", ""):
+                                player_mode_dict[m_id] = "🏖️ 假期 (v)"
+                            elif f"{m_id}(i)" in row_text.replace(" ", ""):
+                                player_mode_dict[m_id] = "💤 不活躍 (i)"
+                            else:
+                                player_mode_dict[m_id] = "🟢 線上/正常"
                             
                             numbers = re.findall(r'\d[\d\s\.]{5,}', row_text)
                             for num_str in numbers:
@@ -158,20 +140,20 @@ df_monsters["目前落腳新宇宙"] = df_monsters["ID"].apply(lambda x: st.sess
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: st.session_state.player_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters["ID"].apply(lambda x: st.session_state.player_scores.get(x, 0))
 
-# 根據分數動態劃分四大恐龍階級
+# 💡 重新焊死：老大欽定的遠古恐龍獵場稱號與圖標
 def dynamic_threat_level(score):
     if score >= 200000000000:
-        return "Rex 2千億級暴龍"
+        return "🦖 2千億級暴龍"
     elif score >= 100000000000:
-        return "Gorilla 千億級金剛"
+        return "🦍 千億級金剛"
     elif score >= 10000000000:
-        return "Crocodile 百億級巨鱷"
+        return "🐊 百億級巨鱷"
     elif score >= 1000000000:
-        return "Shark 近百億對手"
+        return "🦈 近百億對手"
     elif score > 0:
-         return "Hatching_Chick 孵化中幼體"
+         return "🐣 孵化中幼體"
     else:
-        return "White_Circle 等待數據同步"
+        return "⚪ 等待數據同步"
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
@@ -188,19 +170,18 @@ df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: 
 # 重排表格
 df_filtered = df_filtered[["ID", "原宇宙", "目前落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
-# 6. 上半部：實時戰略儀表板
+# 6. 上半部：實時戰略儀表板 (純 HTML/CSS 降維流)
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨獸</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
 with col2:
-    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    count_b = len(df_monsters[df_monsters['currently_status'] == 'Belinda (180)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
 with col3:
     count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
 with col4:
-    count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
-    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)' if 'currently_status' in locals() else df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
     st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -211,3 +192,12 @@ st.dataframe(df_filtered, use_container_width=True, hide_index=True)
 
 # 8. 下半部：情報備忘與外部聯結
 st.markdown("---")
+st.markdown("### 📌 戰略備忘錄")
+tabs = st.tabs(["📊 實時觀察手記", "🔗 官方情報源一鍵查"])
+with tabs[0]:
+    st.write("💡 **老狼生存提醒：**")
+    st.write("1. 內建『原宇宙歷史保底機制』已啟動！若新服排行榜查無資料，系統將自動提取其舊服最高總積分，消滅白燈！")
+    st.write("2. 只要這群暴龍、巨鱷手動登入、或在 11/12 截止前被編入新宇宙，本表的『目前落腳新宇宙』就會立刻精準亮燈。")
+with tabs[1]:
+    st.markdown("- [mmorpg-stat 全球數據庫首頁](https://mmorpg-stat.eu)")
+    st.markdown("- [OGame TW 官方論壇存檔看板](https://gameforge.com)")

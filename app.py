@@ -85,31 +85,29 @@ if target_universe != "全部宇宙":
 else:
     df_filtered = df_monsters
 
-# 6. 上半部：實時戰略儀表板
-st.markdown("""
-    <style>
-    /* 強制覆寫 Metric 的超大數字值 */
-    div[class*="stMetricValue"] > div {
-        font-size: 20px !important;   /* 強制縮小數字到 20px，比剛才再精緻一點 */
-        font-weight: 700 !important;
-    }
-    /* 強制覆寫 Metric 的上方小標題 */
-    div[class*="stMetricLabel"] > div {
-        font-size: 13px !important;   /* 強制小標題維持在 13px */
-        color: #b0b3b8 !important;   /* 讓標題顏色稍微調淡，看起來更像專業後台 */
-    }
-    /* 移除過大的上下間距，讓畫面更緊湊 */
-    div[data-testid="stMetricVideo"] {
-        padding: 0px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
+# 6. 上半部：實時戰略儀表板 (改用純 HTML/CSS 控制，100% 精準縮小)
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("鎖定監控巨鱷", f"{len(df_monsters)} 員")
-col2.metric("已進駐 Belinda (180)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])} 員")
-col3.metric("已進駐 Cetus (181)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])} 員")
-col4.metric("已進駐 Dione (182)", f"{len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])} 員")
+
+# 這裡的 font-size: 20px 就是數字大小，font-size: 13px 就是小標題大小，您可以隨意調！
+with col1:
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">鎖定監控巨鱷</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{len(df_monsters)} 員</span></div>', unsafe_allow_html=True)
+
+with col2:
+    count_b = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Belinda (180)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Belinda (180)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_b} 員</span></div>', unsafe_allow_html=True)
+
+with col3:
+    count_c = len(df_monsters[df_monsters['currently_status'] == 'Cetus (181)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    count_c = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Cetus (181)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Cetus (181)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_c} 員</span></div>', unsafe_allow_html=True)
+
+with col4:
+    count_d = len(df_monsters[df_monsters['currently_status'] == 'Dione (182)'] if 'currently_status' in locals() else df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    count_d = len(df_monsters[df_monsters['目前落腳新宇宙'] == 'Dione (182)'])
+    st.markdown(f'<div style="text-align: left;"><span style="font-size: 13px; color: #b0b3b8;">已進駐 Dione (182)</span><br><span style="font-size: 22px; font-weight: 700; color: white;">{count_d} 員</span></div>', unsafe_allow_html=True)
+
+# 為了美觀，在計數器跟表格中間補個小空隙
+st.markdown("<br>", unsafe_allow_html=True)
 
 st.markdown("### 📡 即時監控情報管理表")
 # 渲染高顏值管理表格

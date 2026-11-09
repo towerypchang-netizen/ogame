@@ -156,7 +156,7 @@ def dynamic_threat_level(score):
 
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 df_filtered = df_monsters.sort_values(by='實時總積分', ascending=False)
-df_filtered["實時總積分"] = df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
+df_filtered["實時總積分"] = df_filtered["實清總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0") if '實清總積分' in locals() else df_filtered["實時總積分"].apply(lambda x: f"{x:,}" if x > 0 else "0")
 df_filtered = df_filtered[["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "威脅程度", "備註"]]
 
 count_b = len(df_monsters[df_monsters['落腳新宇宙'] == 'Belinda (180)'])
@@ -177,11 +177,11 @@ st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# === 💡 7. 下半部全局實裝：利用純 HTML Grid 容器將「左直列監控艙」與「右大表格」綁死在同一個行內！ ===
-# 將所有資料渲染包進同一個 Grid 網格中，這下誰都別想往下掉！
+# === 📊 下半部全局實裝：利用純 HTML Grid 容器將「左直列監控艙」與「右大表格」綁死在同一個行內！ ===
+# 💡 終極修正：補齊結幕引號與括號，徹底碾碎 SyntaxError！
 st.markdown(f"""
     <div class="tianwang-main-layout">
-        <!-- 🧱 左側軌道：黑框白字直列監控艙 -->
+        <!-- 🧱 左側軌道 -->
         <div style="display: flex; flex-direction: column;">
             <div class="universe-monitor-box">
                 <div class="universe-title">Belinda</div>
@@ -197,6 +197,6 @@ st.markdown(f"""
             </div>
         </div>
         
-        <!-- 📊 右側主軌道：天梯大表格 -->
+        <!-- 📊 右側主軌道 -->
         <div style="display: flex; flex-direction: column; width: 100%;">
             <div style="color:#b0b3b8; font-size:14px; font-weight:bold; margin-bottom: 10px;">管制共 {len(df_monsters)} 員</div>

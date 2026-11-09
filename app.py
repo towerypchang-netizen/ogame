@@ -17,10 +17,10 @@ ASSET_DIR = Path(__file__).resolve().parent
 # 1. 網頁頁面配置與官方星際底圖注入
 st.set_page_config(page_title="OGame TW FazoR 情報站", page_icon="🪐", layout="wide")
 
-# 💡 注入原生表格與按鈕樣式調校，確保維持老大的黑框高顏值星際風
+# 💡 注入原生表格與按鈕樣式調校，確保維持最穩定的黑框星際風
 st.markdown("""
     <style>
-    /* 🎯 讓 Streamlit 原生重新整理按鈕外觀完美融入監控列 */
+    /* 讓 Streamlit 原生重新整理按鈕外觀完美融入監控列 */
     div.stButton > button {
         height: 62px !important;
         width: 150px !important;
@@ -37,7 +37,7 @@ st.markdown("""
         border: 2px solid #ffffff !important;
     }
     
-    /* 🎯 精美黑框方塊的外觀樣式定義 */
+    /* 🎯 專屬打造方塊的外觀樣式定義 */
     .universe-monitor-box-fixed {
         border: 2px solid #ffffff !important;
         background-color: rgba(14, 17, 23, 0.9) !important;
@@ -158,7 +158,7 @@ def fetch_and_collide_data():
             pass
     return status_dict, player_mode_dict, score_dict
 
-# 🛡️ 安全獲取即時大數據
+# 🛡️ 執行最安全的資料抓取與保底映射
 try:
     latest_status, latest_modes, latest_scores = fetch_and_collide_data()
 except Exception:
@@ -187,40 +187,33 @@ count_b = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Belinda',
 count_c = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Cetus', na=False)])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'].str.contains('Dione', na=False)])
 
-# === 🧱 頁面上半部 ===
+# === 🧱 頁面上半部渲染 ===
 st.markdown(f'<div style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">{logo_html}<span style="font-size: 26px; font-weight: bold; color: white; font-family: Microsoft JhengHei, sans-serif;">諸神黃昏：u10-TW FazoR 併服情報站</span></div>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：資料依統計網站更新進度同步；找不到玩家代表已遷徙或刪號，狀態將標記為「已遷徙或不明」。</span>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 
-# === 📊 中欄：全新升級「絕對安全一體流」橫向工具列 ===
-# 使用 Streamlit 內建的分欄並嚴格指定寬度比例，完全防範 HTML 標籤不對稱造成的隱漏
+# === 📊 中欄：完美修復引號、單行安全化並列排版 ===
 tool_col1, tool_col2, tool_col3, tool_col4 = st.columns([1.5, 1.2, 1.2, 1.2])
 
 with tool_col1:
-    # 🎯 按鈕佔據最左側頭頂（精準扣齊黃色箭頭位置）
+    # 🎯 重新整理按鈕精準靠齊頭頂
     if st.button("🔄 立即重新整理"):
         st.cache_data.clear()
         st.rerun()
 
+# 將多行引號字串拆碎為安全單行，徹底杜絕 SyntaxError 阻斷錯誤
 with tool_col2:
-    st.markdown(f"""
-        <div class="universe-monitor-box-fixed">
-            <div class="universe-title-fixed">Belinda</div>
-            <div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_b}</span> 員</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="universe-monitor-box-fixed"><div class="universe-title-fixed">Belinda</div><div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_b}</span> 員</div></div>', unsafe_allow_html=True)
 
 with tool_col3:
-    st.markdown(f"""
-        <div class="universe-monitor-box-fixed">
-            <div class="universe-title-fixed">Cetus</div>
-            <div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_c}</span> 員</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="universe-monitor-box-fixed"><div class="universe-title-fixed">Cetus</div><div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_c}</span> 員</div></div>', unsafe_allow_html=True)
 
 with tool_col4:
-    st.markdown(f"""
-        <div class="universe-monitor-box-fixed">
-            <div class="universe-title-fixed">Dione</div>
+    st.markdown(f'<div class="universe-monitor-box-fixed"><div class="universe-title-fixed">Dione</div><div class="universe-count-fixed">已進駐 <span class="universe-num-fixed">{count_d}</span> 員</div></div>', unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+
+# === 📊 下半部：原生滿版高顏值大天梯表 ===

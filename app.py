@@ -63,12 +63,11 @@ if os.path.exists("orion.jpg"):
 # 核心進化：啟動 60 秒全自動天網重新整理內核
 st_autorefresh(interval=60000, key="datarefresh")
 
-# 💡 核心進化：將 logo.png 轉化為 base64 碼以達成 HTML 完美並列不換行
+# 將 logo.png 轉化為 base64 碼以達成 HTML 完美並列不換行
 logo_html = ""
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as logo_file:
         encoded_logo = base64.b64encode(logo_file.read()).decode()
-    # 微調圖片高度為 65px，使其與後方文字完美等高並列
     logo_html = f'<img src="data:image/png;base64,{encoded_logo}" style="height: 65px; margin-right: 20px; vertical-align: middle;">'
 
 # 🎯 利用 Flexbox 讓官方 Logo 與 FazoR 專屬戰略標題在同一行完美合體
@@ -81,6 +80,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 st.markdown("---")
+
+# 💡 依照指示移上來的「戰略備忘錄警示列」：焊死在標題正下方！
+st.markdown('<span style="font-size: 14px; font-weight: bold; color: #ffffff;">🚀 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！</span>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # 3. 核心監控巨鱷名單基底
 def get_monster_base_data():
@@ -109,7 +112,7 @@ def get_monster_base_data():
         
         # === Cosmos 服 ===
         {"ID": "ATRAGON", "原宇宙": "Cosmos", "保底積分": 287209472520, "備註": "Cosmos服二千八百億遠古殘暴龍"},
-        {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備鱷": "Cosmos 指標核心巨鱷"},
+        {"ID": "Kinopio", "原宇宙": "Cosmos", "保底積分": 16000000000, "備註": "Cosmos 指標核心巨鱷"},
         {"ID": "FUIYOH", "原宇宙": "Cosmos", "保底積分": 14500000000, "備註": "Cosmos 核心玩家巨鱷"},
         {"ID": "Chief Halo", "原宇宙": "Cosmos", "保底積分": 5500000000, "備註": "Cosmos 核心玩家鯊魚"},
         {"ID": "President Zenith", "原宇宙": "Cosmos", "保底積分": 4800000000, "備註": "Cosmos 核心玩家鯊魚"}
@@ -182,7 +185,7 @@ count_c = len(df_monsters[df_monsters['落腳新宇宙'] == 'Cetus (181)'])
 count_d = len(df_monsters[df_monsters['落腳新宇宙'] == 'Dione (182)'])
 
 # 6. 核心佈局：發動 雙軌黃金比例並列流
-left_panel, right_panel = st.columns([1, 6]) # 調整比例讓左直列監控艙更加緊湊
+left_panel, right_panel = st.columns()
 
 # === 🧱 左側軌道：黑框白字直列監控艙 ===
 with left_panel:
@@ -213,8 +216,3 @@ with right_panel:
     
     # 中半部：即時情報管理表格 (HTML 強制高亮渲染)
     st.markdown("### 🪟 即時監控情報管理表")
-    st.write(df_filtered.to_html(escape=False, index=False), unsafe_allow_html=True)
-
-# 8. 最底部：橫跨全寬度的戰略備忘錄
-st.markdown("---")
-st.markdown("### 📌 戰略備忘錄：系統每分鐘自動更新，當這群怪物在全新宇宙遷徙並上線後，新服位置將會即時點亮！")

@@ -8,6 +8,8 @@ from pathlib import Path
 from html import escape
 from html.parser import HTMLParser
 from urllib.parse import urljoin
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFilter
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -271,11 +273,36 @@ def fetch_and_collide_data(include_new=False):
 
 
 def dynamic_threat_level(score):
-    if score >= 200000000000: return "🟣 2千億級暴龍"
-    elif score >= 100000000000: return "🔴 千億級金剛"
-    elif score >= 10000000000: return "🟠 百億級巨鱷"
-    elif score >= 1000000000: return "🟡 近百億對手"
-    else: return "🟢 孵化中幼體"
+    if score >= 200000000000: return "2千億級暴龍"
+    elif score >= 100000000000: return "千億級金剛"
+    elif score >= 10000000000: return "百億級巨鱷"
+    elif score >= 1000000000: return "近百億對手"
+    else: return "孵化中幼體"
+
+
+def threat_color(score):
+    if score >= 200000000000: return "#6A0DAD"  # 深紫色
+    elif score >= 100000000000: return "#FF2438"  # 亮紅色
+    elif score >= 10000000000: return "#C98A4A"  # 亮棕色
+    elif score >= 1000000000: return "#FFB000"  # 橘黃色
+    else: return "#00E640"
+
+
+@st.cache_data(show_spinner=False)
+def threat_lamp(color):
+    # 透明 PNG 在原生表格顯示，只有燈號帶白光；不改文字或儲存格底色。
+    scale = 4
+    image = Image.new("RGBA", (24 * scale, 24 * scale))
+    halo = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    ImageDraw.Draw(halo).ellipse((3*scale, 3*scale, 21*scale, 21*scale), fill=(255, 255, 255, 185))
+    image.alpha_composite(halo.filter(ImageFilter.GaussianBlur(1.4 * scale)))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((5*scale, 5*scale, 19*scale, 19*scale), fill=color,
+                 outline=(255, 255, 255, 230), width=2)
+    image = image.resize((24, 24), Image.Resampling.LANCZOS)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 # 先建立畫面，再讀取網站，避免等待期間只看到背景。
@@ -311,6 +338,8 @@ def render_monitor_table(frame, player_urls=None, initial=False):
             )
     columns = ["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]
     display_frame = frame.sort_values("實時總積分", ascending=False)[columns].copy()
+    display_frame.insert(display_frame.columns.get_loc("威脅程度"), "威脅燈號",
+                         display_frame["實時總積分"].map(lambda score: threat_lamp(threat_color(score))))
     # 連結的片段保存顯示名稱；網址仍指向原本的玩家／宇宙來源頁。
     for index, row in frame.iterrows():
         origin_id = next(key for key, name in SOURCE_UNIVERSES.items() if name == row["原宇宙"])
@@ -335,7 +364,8 @@ def render_monitor_table(frame, player_urls=None, initial=False):
                 "當前玩家狀態": st.column_config.TextColumn(width=140),
                 "實時總積分": st.column_config.NumberColumn(format="%,d", width=165),
                 "積分來源": st.column_config.TextColumn(width=100),
-                "威脅程度": st.column_config.TextColumn(width=175),
+                "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：2千億；亮紅：千億；亮棕：百億；橘黃：近百億。燈號帶白色外光暈。"),
+                "威脅程度": st.column_config.TextColumn(width=150),
                 "備註": st.column_config.TextColumn("備註", help="mmorpg 排名頁所列聯盟；未取得玩家資料時顯示未確認。", width=130),
             },
         )

@@ -7,7 +7,12 @@ import base64
 from pathlib import Path
 from html import escape
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
+import json
+import hashlib
+import hmac
+import time
+import threading
 from io import BytesIO
 from PIL import Image, ImageDraw
 
@@ -111,9 +116,6 @@ if (ASSET_DIR / "orion.jpg").exists():
         </style>
     """, unsafe_allow_html=True)
 
-# 核心進化：啟動 60 秒全自動重新整理內核
-if st_autorefresh is not None:
-    st_autorefresh(interval=60000, key="datarefresh")
 
 # 將 logo.png 轉化為 base64 碼以達成 HTML 完美並列不換行
 logo_html = ""
@@ -161,6 +163,167 @@ SOURCE_UNIVERSES = {"139": "Merkur", "141": "Oberon", "155": "Cosmos"}
 NEW_UNIVERSES = {"180": "Belinda", "181": "Cetus", "182": "Dione"}
 
 
+# 管理者認證與手動遷徙資料；公開訪客沒有寫入權限。
+DESTINATION_OPTIONS = ["Belinda", "Cetus", "Dione"]
+
+
+def setting(name, default=""):
+    try:
+        return str(st.secrets.get(name, os.environ.get(name, default)))
+    except (FileNotFoundError, KeyError):
+        return str(os.environ.get(name, default))
+
+
+def is_admin():
+    password = setting("ADMIN_PASSWORD")
+    ticket = st.session_state.get("_admin_ticket", {})
+    fingerprint = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return bool(password and ticket.get("expires", 0) > time.time()
+                and hmac.compare_digest(ticket.get("fingerprint", ""), fingerprint))
+
+
+def login_admin():
+    attempt = st.session_state.pop("_admin_password", "")
+    if st.session_state.get("_admin_locked_until", 0) > time.time():
+        st.session_state["_admin_error"] = "嘗試次數過多，請稍後再試。"
+        return
+    expected = setting("ADMIN_PASSWORD")
+    if expected and hmac.compare_digest(attempt.encode("utf-8"), expected.encode("utf-8")):
+        st.session_state["_admin_ticket"] = {
+            "fingerprint": hashlib.sha256(expected.encode("utf-8")).hexdigest(),
+            "expires": time.time() + 8 * 60 * 60,
+        }
+        st.session_state.pop("_admin_error", None)
+        st.session_state["_admin_failures"] = 0
+    else:
+        failures = st.session_state.get("_admin_failures", 0) + 1
+        st.session_state["_admin_failures"] = failures
+        if failures >= 5:
+            st.session_state["_admin_locked_until"] = time.time() + 60
+            st.session_state["_admin_failures"] = 0
+        st.session_state["_admin_error"] = "密碼不正確。"
+
+
+def logout_admin():
+    st.session_state.pop("_admin_ticket", None)
+    st.session_state.pop("_destination_snapshot", None)
+
+
+def admin_controls():
+    with st.sidebar.expander("管理者", expanded=is_admin()):
+        if is_admin():
+            st.success("已登入管理者")
+            st.button("登出", on_click=logout_admin)
+        elif not setting("ADMIN_PASSWORD"):
+            st.caption("尚未設定管理者密碼，目前僅供檢視。")
+        else:
+            with st.form("admin_login"):
+                st.text_input("管理者密碼", type="password", key="_admin_password")
+                st.form_submit_button("登入", on_click=login_admin)
+            if st.session_state.get("_admin_error"):
+                st.error(st.session_state["_admin_error"])
+
+
+def validate_destinations(data):
+    if not isinstance(data, dict):
+        raise ValueError("遷徙資料格式不正確。")
+    valid_players = set(get_monster_base_data()["ID"])
+    cleaned = {}
+    for player, destination in data.items():
+        if player not in valid_players or destination not in DESTINATION_OPTIONS:
+            raise ValueError("遷徙資料包含未知玩家或不允許的新宇宙。")
+        cleaned[player] = destination
+    return cleaned
+
+
+def github_store():
+    repo = setting("DESTINATIONS_GITHUB_REPO")
+    token = setting("DESTINATIONS_GITHUB_TOKEN")
+    if not repo and not token:
+        return None
+    if not repo or not token or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        raise ValueError("請完整設定 GitHub 儲存庫與權杖。")
+    path = setting("DESTINATIONS_GITHUB_PATH", "player_destinations.json")
+    branch = setting("DESTINATIONS_GITHUB_BRANCH", "main")
+    url = f"https://api.github.com/repos/{repo}/contents/{quote(path, safe='/')}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    return url, headers, branch
+
+
+def read_destinations():
+    remote = github_store()
+    if remote:
+        url, headers, branch = remote
+        response = requests.get(url, headers=headers, params={"ref": branch}, timeout=(3, 8))
+        if response.status_code == 404:
+            # 先確認儲存庫與分支存在，避免把權限／設定錯誤當成空白資料。
+            repo = setting("DESTINATIONS_GITHUB_REPO")
+            check = requests.get(f"https://api.github.com/repos/{repo}/branches/{quote(branch, safe='')}", headers=headers, timeout=(3, 8))
+            if check.status_code != 200:
+                raise ValueError("GitHub 儲存庫、分支或讀取權限設定不正確。")
+            return {}, None
+        if response.status_code != 200:
+            raise ValueError(f"GitHub 資料讀取失敗（HTTP {response.status_code}）。")
+        payload = response.json()
+        data = json.loads(base64.b64decode(payload["content"]).decode("utf-8"))
+        return validate_destinations(data), payload["sha"]
+    path = ASSET_DIR / "data" / "player_destinations.json"
+    if not path.exists():
+        return {}, None
+    content = path.read_bytes()
+    return validate_destinations(json.loads(content.decode("utf-8"))), hashlib.sha256(content).hexdigest()
+
+
+@st.cache_resource
+def destination_write_lock():
+    return threading.Lock()
+
+
+def save_destinations(data, expected_revision):
+    # 寫入端再次驗證，不依賴前端 disabled 或隱藏欄位當作權限控制。
+    if not is_admin():
+        raise PermissionError("僅管理者可以修改落腳新宇宙。")
+    cleaned = validate_destinations(data)
+    content = (json.dumps(cleaned, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    with destination_write_lock():
+        _, revision = read_destinations()
+        if revision != expected_revision:
+            raise ValueError("資料已被其他管理者更新，請重新載入後再修改。")
+        remote = github_store()
+        if remote:
+            url, headers, branch = remote
+            body = {"message": "Update player destination universes", "branch": branch,
+                    "content": base64.b64encode(content).decode("ascii")}
+            if revision:
+                body["sha"] = revision
+            response = requests.put(url, headers=headers, json=body, timeout=(3, 12))
+            if response.status_code not in (200, 201):
+                raise ValueError(f"GitHub 儲存失敗（HTTP {response.status_code}），資料尚未儲存。")
+        else:
+            path = ASSET_DIR / "data" / "player_destinations.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_suffix(".tmp")
+            try:
+                temporary.write_bytes(content)
+                os.replace(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+
+
+def save_edited_destinations(edited, original, revision):
+    if not is_admin():
+        raise PermissionError("管理者登入已失效，請重新登入。")
+    if len(edited) != len(original) or edited["_player_id"].tolist() != original["_player_id"].tolist():
+        raise ValueError("玩家資料順序或識別碼不符，請重新載入。")
+    data = {}
+    for player, value in zip(edited["_player_id"], edited["落腳新宇宙"]):
+        if pd.isna(value) or value == "":
+            continue
+        data[player] = value
+    save_destinations(data, revision)
+
+
+
 def universe_url(uni_id):
     return f"https://www.mmorpg-stat.eu/?pagex=1&univers=_{uni_id}&pays=11"
 
@@ -203,14 +366,12 @@ class RankingParser(HTMLParser):
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def fetch_and_collide_data(include_new=False):
+def fetch_and_collide_data():
     base = get_monster_base_data()
     origin_by_player = dict(zip(base["ID"], base["原宇宙"]))
     destinations, modes, scores, player_urls, alliances = {}, {}, {}, {}, {}
     errors, connections = [], []
     universes = dict(SOURCE_UNIVERSES)
-    if include_new:
-        universes.update(NEW_UNIVERSES)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for uni_id, name in universes.items():
         url = universe_url(uni_id)
@@ -251,8 +412,6 @@ def fetch_and_collide_data(include_new=False):
                 status = re.search(r"\(([^)]*)\)", cells[2][len(player):])
                 flags = status.group(1).lower() if status else ""
                 modes[player] = "🏖️ 假期 (v)" if "v" in flags else "💤 不活躍 (i)" if "i" in flags else "🟢 正常"
-                if uni_id in NEW_UNIVERSES:
-                    destinations[player] = f"{name} ({uni_id})"
                 report["符合追蹤玩家"] += 1
             if not ranking_rows:
                 raise ValueError("HTTP 200，但找不到可辨識的玩家排名列")
@@ -310,28 +469,47 @@ st.markdown(
 st.caption("資料依統計網站更新；未取得積分時顯示預設值。正常狀態不代表目前在線。")
 if st_autorefresh is None:
     st.caption("未安裝 streamlit-autorefresh，目前使用手動更新。")
+admin_controls()
+# 管理者編輯時暫停自動重整，避免中斷尚未送出的修改。
+if st_autorefresh is not None and not is_admin():
+    st_autorefresh(interval=60000, key="datarefresh")
 left_column, right_column = st.columns([1, 6])
 with left_column:
     if st.button("立即重新整理"):
         fetch_and_collide_data.clear()
-include_new = st.checkbox("啟用新三服同步", value=False, help="目前保留三個宇宙連結；勾選後才開始查詢新服資料。")
+        st.session_state.pop("_destination_snapshot", None)
+        st.session_state["_destination_generation"] = st.session_state.get("_destination_generation", 0) + 1
 monitor_slot = left_column.empty()
 table_slot = right_column.empty()
 notice_slot = st.empty()
+try:
+    manual_destinations, destination_revision = read_destinations()
+    destination_load_error = ""
+except (requests.RequestException, ValueError, KeyError, OSError) as exc:
+    manual_destinations, destination_revision = {}, None
+    destination_load_error = f"手動遷徙資料讀取失敗：{exc}"
+    st.error(destination_load_error)
+if is_admin() and not (setting("DESTINATIONS_GITHUB_REPO") or setting("DESTINATIONS_GITHUB_TOKEN")):
+    st.warning("目前使用伺服器本機儲存；雲端重啟或重新部署可能遺失。請依設定說明啟用 GitHub 永久儲存。")
+if st.session_state.pop("_destination_saved", False):
+    st.success("落腳新宇宙已儲存，所有訪客都能看到更新。")
 
 
 def render_monitor_table(frame, player_urls=None, initial=False):
     player_urls = player_urls or {}
     with monitor_slot.container():
-        for uni_id, name in NEW_UNIVERSES.items():
-            universe = f"{name} ({uni_id})"
-            count = int((frame["落腳新宇宙"] == universe).sum())
-            label = f"已確認 {count} 員" if include_new else "待開通"
+        universe_labels = {"Belinda": "戰術宇宙", "Cetus": "平衡宇宙", "Dione": "農夫宇宙"}
+        for name in DESTINATION_OPTIONS:
             st.markdown(
                 '<div class="universe-monitor-box-vertical">'
-                f'<a class="universe-title-fixed" style="color:white;" href="{universe_url(uni_id)}" target="_blank" rel="noopener noreferrer">{name}</a>'
-                f'<div class="universe-count-fixed">{label}</div></div>', unsafe_allow_html=True,
+                f'<div class="universe-title-fixed">{name}</div>'
+                f'<div class="universe-count-fixed">{universe_labels[name]}</div></div>', unsafe_allow_html=True,
             )
+    editing = is_admin() and not initial and not destination_load_error
+    if editing:
+        if "_destination_snapshot" not in st.session_state:
+            st.session_state["_destination_snapshot"] = (frame.copy(), dict(player_urls), destination_revision)
+        frame, player_urls, edit_revision = st.session_state["_destination_snapshot"]
     columns = ["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]
     display_frame = frame.sort_values("實時總積分", ascending=False)[columns].copy()
     display_frame.insert(display_frame.columns.get_loc("威脅程度"), "威脅燈號",
@@ -343,32 +521,58 @@ def render_monitor_table(frame, player_urls=None, initial=False):
         display_frame.at[index, "原宇宙"] = f'{origin_url}#{row["原宇宙"]}'
         player_url = player_urls.get(row["ID"], origin_url).split("#", 1)[0]
         display_frame.at[index, "ID"] = f'{player_url}#{row["ID"]}'
+    display_frame["_player_id"] = frame.loc[display_frame.index, "ID"]
+    display_frame = display_frame.reset_index(drop=True)
+    if not editing:
+        display_frame["落腳新宇宙"] = display_frame["落腳新宇宙"].fillna("待確認")
     with table_slot.container():
         st.caption(f"管制共 {len(frame)} 員")
         st.subheader("即時監控情報管理表")
         st.caption("拖曳欄位標題右側邊界，即可調整欄寬。")
-        st.dataframe(
-            display_frame,
-            hide_index=True,
-            width="stretch",
-            height=880,
-            key="player_monitor_initial" if initial else "player_monitor_table",
-            column_config={
+        column_config = {
+                "_player_id": None,
                 "ID": st.column_config.LinkColumn("ID", display_text=r"#(.*)$", width=175),
                 "原宇宙": st.column_config.LinkColumn("原宇宙", display_text=r"#(.*)$", width=110),
-                "落腳新宇宙": st.column_config.TextColumn(width=120),
+                "落腳新宇宙": st.column_config.SelectboxColumn(options=DESTINATION_OPTIONS, required=False, width=120, help="僅管理者可修改；空白代表尚未指定。"),
                 "當前玩家狀態": st.column_config.TextColumn(width=140),
                 "實時總積分": st.column_config.NumberColumn(format="%,d", width=165),
                 "積分來源": st.column_config.TextColumn(width=100),
                 "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：2千億；亮紅：千億；深棕：百億；橘黃：近百億。"),
                 "威脅程度": st.column_config.TextColumn(width=150),
                 "備註": st.column_config.TextColumn("備註", help="mmorpg 排名頁所列聯盟；未取得玩家資料時顯示未確認。", width=130),
-            },
-        )
+            }
+        if editing:
+            st.caption("管理者模式：雙擊「落腳新宇宙」選擇新宇宙，完成後按儲存。其他欄位僅供檢視。")
+            with st.form("destination_editor_form"):
+                edited = st.data_editor(
+                    display_frame, hide_index=True, width="stretch", height=880,
+                    column_config=column_config, num_rows="fixed",
+                    disabled=[column for column in display_frame.columns if column != "落腳新宇宙"],
+                    key=f"destination_editor_{st.session_state.get('_destination_generation', 0)}",
+                )
+                submitted = st.form_submit_button("儲存新宇宙")
+            if submitted:
+                try:
+                    save_edited_destinations(edited, display_frame, edit_revision)
+                except (PermissionError, ValueError, OSError, requests.RequestException) as exc:
+                    st.error(f"儲存失敗：{exc}")
+                else:
+                    st.session_state.pop("_destination_snapshot", None)
+                    st.session_state["_destination_generation"] = st.session_state.get("_destination_generation", 0) + 1
+                    st.session_state["_destination_saved"] = True
+                    st.rerun()
+            if st.button("重新載入手動資料"):
+                st.session_state.pop("_destination_snapshot", None)
+                st.session_state["_destination_generation"] = st.session_state.get("_destination_generation", 0) + 1
+                st.rerun()
+        else:
+            st.dataframe(display_frame, hide_index=True, width="stretch", height=880,
+                         key="player_monitor_initial" if initial else "player_monitor_table",
+                         column_config=column_config)
 
 
 fallback = get_monster_base_data()
-fallback["落腳新宇宙"] = "未確認" if include_new else "待開通"
+fallback["落腳新宇宙"] = fallback["ID"].map(manual_destinations).astype("object").where(lambda series: series.notna(), None)
 fallback["當前玩家狀態"] = "讀取中"
 fallback["實時總積分"] = fallback["保底積分"]
 fallback["積分來源"] = "非即時"
@@ -381,14 +585,14 @@ notice_slot.info("正在讀取統計網站；表格已先載入預設資料。")
 latest_status, latest_modes, latest_scores = {}, {}, {}
 connections, player_urls, latest_alliances = [], {}, {}
 try:
-    latest_status, latest_modes, latest_scores, fetch_errors, connections, player_urls, latest_alliances = fetch_and_collide_data(include_new)
+    latest_status, latest_modes, latest_scores, fetch_errors, connections, player_urls, latest_alliances = fetch_and_collide_data()
 except Exception as exc:
     fetch_errors = [f"資料讀取失敗，使用預設保底資料：{type(exc).__name__}：{exc}"]
 
 df_monsters = get_monster_base_data()
 
 # 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
-df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認" if include_new else "待開通"))
+df_monsters["落腳新宇宙"] = df_monsters["ID"].map(manual_destinations).astype("object").where(lambda series: series.notna(), None)
 # 只在原宇宙排名讀取成功而未找到玩家時，依設定標示已遷徙。
 # 拒絕存取或一般連線錯誤不套用遷徙狀態。
 origin_results = {report["宇宙"].split()[0]: report["結果"] for report in connections}
@@ -423,5 +627,4 @@ else:
 with st.expander("mmorpg 原宇宙連線狀態", expanded=True):
     for report in connections:
         st.markdown(f"[{report['宇宙']}]({report['來源']})：{report['連線狀態']}；找到 {report['符合追蹤玩家']} 名追蹤玩家")
-    if not include_new:
-        st.caption("Belinda (180)、Cetus (181)、Dione (182) 的連結持續保留，目前未發送連線查詢；開通後可勾選上方開關啟用同步。")
+    st.caption("落腳新宇宙由管理者手動指定；不查詢新三服。")

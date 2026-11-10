@@ -432,7 +432,7 @@ def fetch_and_collide_data():
 
 
 def dynamic_threat_level(score):
-    if score >= 200000000000: return "2千億暴龍"
+    if score >= 200000000000: return "二千億暴龍"
     elif score >= 100000000000: return "千億級金剛"
     elif score >= 10000000000: return "百億級巨鱷"
     elif score >= 1000000000: return "近百億對手"

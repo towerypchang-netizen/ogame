@@ -204,7 +204,7 @@ class RankingParser(HTMLParser):
 def fetch_and_collide_data(include_new=False):
     base = get_monster_base_data()
     origin_by_player = dict(zip(base["ID"], base["原宇宙"]))
-    destinations, modes, scores, player_urls = {}, {}, {}, {}
+    destinations, modes, scores, player_urls, alliances = {}, {}, {}, {}, {}
     errors, connections = [], []
     universes = dict(SOURCE_UNIVERSES)
     if include_new:
@@ -243,10 +243,12 @@ def fetch_and_collide_data(include_new=False):
                     raise ValueError(f"{player} 的積分超出可處理範圍")
                 scores[player] = score
                 player_urls[player] = urljoin(url, href)
+                alliance_links = [text for link, text in links if re.search(r"[?&]ftr=\d+\.all(?:&|$)", link)]
+                alliances[player] = alliance_links[0] if alliance_links else (cells[3].strip() or "無聯盟")
                 # 狀態標記在玩家欄，而非積分或整列其他欄位。
                 status = re.search(r"\(([^)]*)\)", cells[2][len(player):])
                 flags = status.group(1).lower() if status else ""
-                modes[player] = "🏖️ 假期 (v)" if "v" in flags else "💤 不活躍 (i)" if "i" in flags else "🟢 正常（非在線判定）"
+                modes[player] = "🏖️ 假期 (v)" if "v" in flags else "💤 不活躍 (i)" if "i" in flags else "🟢 正常"
                 if uni_id in NEW_UNIVERSES:
                     destinations[player] = f"{name} ({uni_id})"
                 report["符合追蹤玩家"] += 1
@@ -257,15 +259,15 @@ def fetch_and_collide_data(include_new=False):
             report["連線狀態"] = f"讀取失敗：{exc}"
             errors.append(f"{name} ({uni_id})：{exc}")
         connections.append(report)
-    return destinations, modes, scores, errors, connections, player_urls
+    return destinations, modes, scores, errors, connections, player_urls, alliances
 
 
 def dynamic_threat_level(score):
-    if score >= 200000000000: return '<span style="color:#ff4b4b;">●</span> 2千億級暴龍'
-    elif score >= 100000000000: return '<span style="color:#ff4b4b;">●</span> 千億級金剛'
-    elif score >= 10000000000: return '<span style="color:#ffa500;">●</span> 百億級巨鱷'
-    elif score >= 1000000000: return '<span style="color:#00c0f2;">●</span> 近百億對手'
-    else: return '<span style="color:#00f900;">●</span> 孵化中幼體'
+    if score >= 200000000000: return "🔴 2千億級暴龍"
+    elif score >= 100000000000: return "🔴 千億級金剛"
+    elif score >= 10000000000: return "🟠 百億級巨鱷"
+    elif score >= 1000000000: return "🔵 近百億對手"
+    else: return "🟢 孵化中幼體"
 
 
 # 先建立畫面，再讀取網站，避免等待期間只看到背景。
@@ -287,13 +289,13 @@ table_slot = right_column.empty()
 notice_slot = st.empty()
 
 
-def render_monitor_table(frame, player_urls=None):
+def render_monitor_table(frame, player_urls=None, initial=False):
     player_urls = player_urls or {}
     with monitor_slot.container():
         for uni_id, name in NEW_UNIVERSES.items():
             universe = f"{name} ({uni_id})"
             count = int((frame["落腳新宇宙"] == universe).sum())
-            label = f"已確認 {count} 員" if include_new else "待開通・暫不查詢"
+            label = f"已確認 {count} 員" if include_new else "待開通"
             st.markdown(
                 '<div class="universe-monitor-box-vertical">'
                 f'<a class="universe-title-fixed" style="color:white;" href="{universe_url(uni_id)}" target="_blank" rel="noopener noreferrer">{name}</a>'
@@ -301,51 +303,64 @@ def render_monitor_table(frame, player_urls=None):
             )
     columns = ["ID", "原宇宙", "落腳新宇宙", "當前玩家狀態", "實時總積分", "積分來源", "威脅程度", "備註"]
     display_frame = frame.sort_values("實時總積分", ascending=False)[columns].copy()
-    display_frame["實時總積分"] = display_frame["實時總積分"].map(lambda score: f"{score:,}")
-    for column in columns:
-        if column != "威脅程度":
-            display_frame[column] = display_frame[column].map(lambda value: escape(str(value)))
+    # 連結的片段保存顯示名稱；網址仍指向原本的玩家／宇宙來源頁。
     for index, row in frame.iterrows():
         origin_id = next(key for key, name in SOURCE_UNIVERSES.items() if name == row["原宇宙"])
-        display_frame.at[index, "原宇宙"] = f'<a style="color:white;" target="_blank" rel="noopener noreferrer" href="{universe_url(origin_id)}">{escape(row["原宇宙"])} ({origin_id})</a>'
-        if row["ID"] in player_urls:
-            href = escape(player_urls[row["ID"]], quote=True)
-            display_frame.at[index, "ID"] = f'<a style="color:white;" target="_blank" rel="noopener noreferrer" href="{href}">{escape(row["ID"])}</a>'
-    table = display_frame.to_html(index=False, escape=False, classes="ogame-final-universe-table", border=0)
-    html = (
-        f'<div style="color:white;">管制共 {len(frame)} 員</div>'
-        '<h3 style="color:white;">即時監控情報管理表</h3>'
-        f'<div class="monitor-table-container-scroll">{table}</div>'
-    )
-    table_slot.markdown("".join(line.strip() for line in html.splitlines()), unsafe_allow_html=True)
+        origin_url = universe_url(origin_id)
+        display_frame.at[index, "原宇宙"] = f'{origin_url}#{row["原宇宙"]}'
+        player_url = player_urls.get(row["ID"], origin_url).split("#", 1)[0]
+        display_frame.at[index, "ID"] = f'{player_url}#{row["ID"]}'
+    with table_slot.container():
+        st.caption(f"管制共 {len(frame)} 員")
+        st.subheader("即時監控情報管理表")
+        st.caption("拖曳欄位標題右側邊界，即可調整欄寬。")
+        st.dataframe(
+            display_frame,
+            hide_index=True,
+            width="stretch",
+            height=880,
+            key="player_monitor_initial" if initial else "player_monitor_table",
+            column_config={
+                "ID": st.column_config.LinkColumn("ID", display_text=r"#(.*)$", width=175),
+                "原宇宙": st.column_config.LinkColumn("原宇宙", display_text=r"#(.*)$", width=110),
+                "落腳新宇宙": st.column_config.TextColumn(width=120),
+                "當前玩家狀態": st.column_config.TextColumn(width=140),
+                "實時總積分": st.column_config.NumberColumn(format="%,d", width=165),
+                "積分來源": st.column_config.TextColumn(width=100),
+                "威脅程度": st.column_config.TextColumn(width=175),
+                "備註": st.column_config.TextColumn("備註", help="mmorpg 排名頁所列聯盟；未取得玩家資料時顯示未確認。", width=130),
+            },
+        )
 
 
 fallback = get_monster_base_data()
-fallback["落腳新宇宙"] = "未確認" if include_new else "待開通（暫不查詢）"
+fallback["落腳新宇宙"] = "未確認" if include_new else "待開通"
 fallback["當前玩家狀態"] = "未確認"
 fallback["實時總積分"] = fallback["保底積分"]
 fallback["積分來源"] = "非即時"
+fallback["備註"] = "未確認"
 fallback["威脅程度"] = fallback["實時總積分"].apply(dynamic_threat_level)
-render_monitor_table(fallback)
+render_monitor_table(fallback, initial=True)
 notice_slot.info("正在讀取統計網站；表格已先載入預設資料。")
 
 # 取得資料後更新表格
 latest_status, latest_modes, latest_scores = {}, {}, {}
-connections, player_urls = [], {}
+connections, player_urls, latest_alliances = [], {}, {}
 try:
-    latest_status, latest_modes, latest_scores, fetch_errors, connections, player_urls = fetch_and_collide_data(include_new)
+    latest_status, latest_modes, latest_scores, fetch_errors, connections, player_urls, latest_alliances = fetch_and_collide_data(include_new)
 except Exception as exc:
     fetch_errors = [f"資料讀取失敗，使用預設保底資料：{type(exc).__name__}：{exc}"]
 
 df_monsters = get_monster_base_data()
 
 # 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
-df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認" if include_new else "待開通（暫不查詢）"))
+df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認" if include_new else "待開通"))
 df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
 
 # 純 HTML 實心指示燈，修正回歸自訂 Table 機制
 df_monsters["積分來源"] = "非即時"
+df_monsters["備註"] = df_monsters["ID"].map(lambda player: latest_alliances.get(player, "未確認"))
 df_monsters["威脅程度"] = df_monsters["實時總積分"].apply(dynamic_threat_level)
 
 render_monitor_table(df_monsters, player_urls)

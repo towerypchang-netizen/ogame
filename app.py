@@ -9,7 +9,7 @@ from html import escape
 from html.parser import HTMLParser
 from urllib.parse import urljoin
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -283,22 +283,18 @@ def dynamic_threat_level(score):
 def threat_color(score):
     if score >= 200000000000: return "#6A0DAD"  # 深紫色
     elif score >= 100000000000: return "#FF2438"  # 亮紅色
-    elif score >= 10000000000: return "#C98A4A"  # 亮棕色
+    elif score >= 10000000000: return "#804000"  # 深棕色
     elif score >= 1000000000: return "#FFB000"  # 橘黃色
     else: return "#00E640"
 
 
 @st.cache_data(show_spinner=False)
 def threat_lamp(color):
-    # 透明 PNG 在原生表格顯示，只有燈號帶白光；不改文字或儲存格底色。
+    # 透明背景的純色圓燈，不加外光暈或描邊。
     scale = 4
     image = Image.new("RGBA", (24 * scale, 24 * scale))
-    halo = Image.new("RGBA", image.size, (255, 255, 255, 0))
-    ImageDraw.Draw(halo).ellipse((3*scale, 3*scale, 21*scale, 21*scale), fill=(255, 255, 255, 185))
-    image.alpha_composite(halo.filter(ImageFilter.GaussianBlur(1.4 * scale)))
     draw = ImageDraw.Draw(image)
-    draw.ellipse((5*scale, 5*scale, 19*scale, 19*scale), fill=color,
-                 outline=(255, 255, 255, 230), width=2)
+    draw.ellipse((5*scale, 5*scale, 19*scale, 19*scale), fill=color)
     image = image.resize((24, 24), Image.Resampling.LANCZOS)
     buffer = BytesIO()
     image.save(buffer, format="PNG")
@@ -364,7 +360,7 @@ def render_monitor_table(frame, player_urls=None, initial=False):
                 "當前玩家狀態": st.column_config.TextColumn(width=140),
                 "實時總積分": st.column_config.NumberColumn(format="%,d", width=165),
                 "積分來源": st.column_config.TextColumn(width=100),
-                "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：2千億；亮紅：千億；亮棕：百億；橘黃：近百億。燈號帶白色外光暈。"),
+                "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：2千億；亮紅：千億；深棕：百億；橘黃：近百億。"),
                 "威脅程度": st.column_config.TextColumn(width=150),
                 "備註": st.column_config.TextColumn("備註", help="mmorpg 排名頁所列聯盟；未取得玩家資料時顯示未確認。", width=130),
             },

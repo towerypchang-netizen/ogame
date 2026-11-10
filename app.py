@@ -212,7 +212,7 @@ def fetch_and_collide_data(include_new=False):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for uni_id, name in universes.items():
         url = universe_url(uni_id)
-        report = {"宇宙": f"{name} ({uni_id})", "連線狀態": "", "符合追蹤玩家": 0, "來源": url}
+        report = {"宇宙": f"{name} ({uni_id})", "結果": "讀取中", "連線狀態": "", "符合追蹤玩家": 0, "來源": url}
         try:
             response = requests.get(url, headers=headers, timeout=(3, 6))
             response.raise_for_status()
@@ -254,8 +254,16 @@ def fetch_and_collide_data(include_new=False):
                 report["符合追蹤玩家"] += 1
             if not ranking_rows:
                 raise ValueError("HTTP 200，但找不到可辨識的玩家排名列")
+            report["結果"] = "讀取成功"
             report["連線狀態"] = f"HTTP {response.status_code}；宇宙與排名頁已核對"
         except (requests.RequestException, ValueError, TypeError) as exc:
+            error_response = getattr(exc, "response", None)
+            status_code = error_response.status_code if error_response is not None else None
+            refused = status_code in (401, 403, 429) or any(
+                marker in str(exc).lower()
+                for marker in ("瀏覽器驗證", "connection refused", "actively refused", "10061", "econnrefused")
+            )
+            report["結果"] = "連線拒絕" if refused else "連線失敗"
             report["連線狀態"] = f"讀取失敗：{exc}"
             errors.append(f"{name} ({uni_id})：{exc}")
         connections.append(report)
@@ -263,10 +271,10 @@ def fetch_and_collide_data(include_new=False):
 
 
 def dynamic_threat_level(score):
-    if score >= 200000000000: return "🔴 2千億級暴龍"
+    if score >= 200000000000: return "🟣 2千億級暴龍"
     elif score >= 100000000000: return "🔴 千億級金剛"
     elif score >= 10000000000: return "🟠 百億級巨鱷"
-    elif score >= 1000000000: return "🔵 近百億對手"
+    elif score >= 1000000000: return "🟡 近百億對手"
     else: return "🟢 孵化中幼體"
 
 
@@ -335,7 +343,7 @@ def render_monitor_table(frame, player_urls=None, initial=False):
 
 fallback = get_monster_base_data()
 fallback["落腳新宇宙"] = "未確認" if include_new else "待開通"
-fallback["當前玩家狀態"] = "未確認"
+fallback["當前玩家狀態"] = "讀取中"
 fallback["實時總積分"] = fallback["保底積分"]
 fallback["積分來源"] = "非即時"
 fallback["備註"] = "未確認"
@@ -355,7 +363,19 @@ df_monsters = get_monster_base_data()
 
 # 🎯 核心業務邏輯：找不到人時，狀態設定為「已遷徙或不明」
 df_monsters["落腳新宇宙"] = df_monsters["ID"].apply(lambda x: latest_status.get(x, "未確認" if include_new else "待開通"))
-df_monsters["當前玩家狀態"] = df_monsters["ID"].apply(lambda x: latest_modes.get(x, "未確認"))
+# 只在原宇宙排名讀取成功而未找到玩家時，依設定標示已遷徙。
+# 拒絕存取或一般連線錯誤不套用遷徙狀態。
+origin_results = {report["宇宙"].split()[0]: report["結果"] for report in connections}
+
+
+def player_status(row):
+    if row["ID"] in latest_modes:
+        return latest_modes[row["ID"]]
+    result = origin_results.get(row["原宇宙"], "連線失敗")
+    return "已遷徙" if result == "讀取成功" else result
+
+
+df_monsters["當前玩家狀態"] = df_monsters.apply(player_status, axis=1)
 df_monsters["實時總積分"] = df_monsters.apply(lambda r: int(latest_scores.get(r["ID"], r["保底積分"])), axis=1).astype('int64')
 
 # 純 HTML 實心指示燈，修正回歸自訂 Table 機制

@@ -108,7 +108,7 @@ if (ASSET_DIR / "orion.jpg").exists():
     st.markdown(f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(14, 17, 23, 0.85), rgba(14, 17, 23, 0.85)), url(data:image/jpeg;base64,{encoded_bg});
+            background-image: linear-gradient(rgba(14, 17, 23, 0.65), rgba(14, 17, 23, 0.65)), url(data:image/jpeg;base64,{encoded_bg});
             background-size: cover;
             background-position: center;
             background-attachment: fixed;

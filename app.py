@@ -435,7 +435,7 @@ def dynamic_threat_level(score):
     if score >= 200000000000: return "二千億暴龍"
     elif score >= 100000000000: return "千億級金剛"
     elif score >= 10000000000: return "百億級巨鱷"
-    elif score >= 1000000000: return "近百億對手"
+    elif score >= 1000000000: return "百億內對手"
     else: return "孵化中幼體"
 
 
@@ -537,7 +537,7 @@ def render_monitor_table(frame, player_urls=None, initial=False):
                 "當前玩家狀態": st.column_config.TextColumn(width=140),
                 "實時總積分": st.column_config.NumberColumn(format="%,d", width=165),
                 "積分來源": st.column_config.TextColumn(width=100),
-                "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：2千億；亮紅：千億；深棕：百億；橘黃：近百億。"),
+                "威脅燈號": st.column_config.ImageColumn("燈號", width=50, help="深紫：二千億；亮紅：千億；深棕：百億；橘黃：百億內。"),
                 "威脅程度": st.column_config.TextColumn(width=150),
                 "備註": st.column_config.TextColumn("備註", help="mmorpg 排名頁所列聯盟；未取得玩家資料時顯示未確認。", width=130),
             }
